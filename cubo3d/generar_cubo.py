@@ -27,23 +27,26 @@ H = 56.0     # alto   (eje Y)
 D = 54.0     # fondo  (eje Z)
 R = 13.0     # radio de redondeo de esquinas/aristas (cuanto mas grande, mas "blandito")
 
-# Panel de la cara (rectangulo redondeado hundido en la cara frontal +Z)
-FACE_W = 40.0      # ancho del panel
-FACE_H = 27.0      # alto del panel
-FACE_R = 8.0       # redondeo de las esquinas del panel
-FACE_CY = 3.0      # desplazamiento vertical del centro del panel (positivo = arriba)
-FACE_RECESS = 2.6  # profundidad del hundido del panel
+# Panel de la cara: la cara es PLANA (al ras), como en la foto. El panel se
+# marca solo con un grabado muy superficial de su contorno, que sirve de guia
+# para pintarlo de otro color (crema). NO es un hundido.
+FACE_W = 40.0            # ancho del panel
+FACE_H = 27.0            # alto del panel
+FACE_R = 8.0             # redondeo de las esquinas del panel
+FACE_CY = 3.0            # desplazamiento vertical del centro del panel (+ = arriba)
+FACE_OUTLINE_DEPTH = 0.7 # profundidad del grabado del contorno (mm)
+FACE_OUTLINE_WIDTH = 1.4 # ancho de la linea grabada del contorno (mm)
 
-# Ojos (dos hoyuelos esfericos)
+# Ojos (discos grabados muy superficiales, al ras, para pintar de negro)
 EYE_DX = 9.5       # separacion horizontal desde el centro
 EYE_DY = 3.5       # altura de los ojos respecto al centro del panel
-EYE_R = 3.8        # radio del ojo
-EYE_DEPTH = 3.0    # profundidad del hoyuelo
+EYE_R = 3.4        # radio del ojo
+EYE_DEPTH = 1.0    # profundidad del grabado
 
-# Nariz (hoyuelo pequenito)
+# Nariz (disco grabado pequenito)
 NOSE_DY = -5.5     # altura de la nariz respecto al centro del panel
-NOSE_R = 1.9       # radio
-NOSE_DEPTH = 1.6   # profundidad
+NOSE_R = 1.5       # radio
+NOSE_DEPTH = 0.7   # profundidad
 
 # Resolucion de la grilla (mm por voxel). Mas pequeno = mas detalle y mas lento.
 VOXEL = 0.5
@@ -66,9 +69,26 @@ def sdf_sphere(p, center, r):
     return np.linalg.norm(p - np.asarray(center), axis=-1) - r
 
 
+def sdf_round_rect_2d(px, py, hx, hy, r):
+    """SDF 2D de un rectangulo redondeado en el plano XY."""
+    qx = np.abs(px) - hx
+    qy = np.abs(py) - hy
+    outside = np.hypot(np.maximum(qx, 0.0), np.maximum(qy, 0.0))
+    inside = np.minimum(np.maximum(qx, qy), 0.0)
+    return outside + inside - r
+
+
 def op_subtract(a, b):
     """Resta booleana: a menos b."""
     return np.maximum(a, -b)
+
+
+def carve_disc(d, X, Y, Z, cx, cy, r, depth, front_z):
+    """Talla un disco de fondo plano (grabado superficial) desde la cara frontal."""
+    radial = np.hypot(X - cx, Y - cy) - r
+    slab = (front_z - depth) - Z            # negativo donde z > front_z - depth
+    disc = np.maximum(radial, slab)         # solido del disco cerca del frente
+    return op_subtract(d, disc)
 
 
 # ----------------------------------------------------------------------------
@@ -83,37 +103,28 @@ def build_field():
     X, Y, Z = np.meshgrid(xs, ys, zs, indexing="ij")
     P = np.stack([X, Y, Z], axis=-1)
 
-    # Cuerpo: cubo redondeado
+    # Cuerpo: cubo redondeado (la cara frontal queda PLANA / al ras)
     body_half = (W / 2 - R, H / 2 - R, D / 2 - R)
     d = sdf_round_box(P, body_half, R)
 
-    front_z = D / 2  # cara frontal nominal
+    front_z = D / 2  # cara frontal nominal (plana)
 
-    # Panel de la cara: caja redondeada que se resta desde el frente.
-    # OJO: en una caja redondeada el radio de redondeo (FACE_R) tambien
-    # extiende la caja en Z, por eso hay que compensarlo para que el hundido
-    # tenga exactamente FACE_RECESS de profundidad.
-    panel_core_hz = 20.0
-    panel_center_z = front_z - FACE_RECESS + panel_core_hz + FACE_R
-    panel_center = np.array([0.0, FACE_CY, panel_center_z])
-    panel_half = (FACE_W / 2 - FACE_R, FACE_H / 2 - FACE_R, panel_core_hz)
-    panel = sdf_round_box(P - panel_center, panel_half, FACE_R)
-    d = op_subtract(d, panel)
+    # Contorno del panel: linea grabada muy superficial (guia para pintar).
+    # Se graba solo el borde del rectangulo redondeado, no todo el interior,
+    # asi la cara sigue plana como en la foto.
+    d2 = sdf_round_rect_2d(X, Y - FACE_CY,
+                           FACE_W / 2 - FACE_R, FACE_H / 2 - FACE_R, FACE_R)
+    border = np.abs(d2) - FACE_OUTLINE_WIDTH / 2.0   # negativo sobre la linea
+    slab = (front_z - FACE_OUTLINE_DEPTH) - Z        # negativo cerca del frente
+    groove = np.maximum(border, slab)
+    d = op_subtract(d, groove)
 
-    # Plano del fondo del panel hundido (donde se apoyan ojos y nariz)
-    panel_z = front_z - FACE_RECESS
+    # Ojos: discos grabados superficiales (al ras), para pintar de negro
+    d = carve_disc(d, X, Y, Z, -EYE_DX, FACE_CY + EYE_DY, EYE_R, EYE_DEPTH, front_z)
+    d = carve_disc(d, X, Y, Z,  EYE_DX, FACE_CY + EYE_DY, EYE_R, EYE_DEPTH, front_z)
 
-    # Ojos (hoyuelos): centro de la esfera empujado hacia adentro
-    ez = panel_z + (EYE_R - EYE_DEPTH)
-    left_eye = sdf_sphere(P, [-EYE_DX, FACE_CY + EYE_DY, ez], EYE_R)
-    right_eye = sdf_sphere(P, [EYE_DX, FACE_CY + EYE_DY, ez], EYE_R)
-    d = op_subtract(d, left_eye)
-    d = op_subtract(d, right_eye)
-
-    # Nariz (hoyuelo pequeno)
-    nz = panel_z + (NOSE_R - NOSE_DEPTH)
-    nose = sdf_sphere(P, [0.0, FACE_CY + NOSE_DY, nz], NOSE_R)
-    d = op_subtract(d, nose)
+    # Nariz: disco grabado pequenito
+    d = carve_disc(d, X, Y, Z, 0.0, FACE_CY + NOSE_DY, NOSE_R, NOSE_DEPTH, front_z)
 
     return d, (xs, ys, zs)
 

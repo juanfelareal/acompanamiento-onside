@@ -22,11 +22,22 @@ n /= (np.linalg.norm(n, axis=1, keepdims=True) + 1e-9)
 
 BASE = np.array([1.0, 0.82, 0.15])  # amarillo del personaje
 
-def render(ax, elev, azim, light_dir):
+FRONT_Z = V[:, 2].max()  # cara frontal
+
+def render(ax, elev, azim, light_dir, depth_shade=False):
     light = np.array(light_dir, float)
     light /= np.linalg.norm(light)
     shade = np.clip(n @ light, 0, 1) * 0.75 + 0.25
     colors = np.clip(BASE[None, :] * shade[:, None], 0, 1)
+    if depth_shade:
+        # Oscurecer SOLO los grabados de la cara frontal (caras que miran al
+        # frente y estan un poco por debajo de z=FRONT_Z). Asi los ojos, la
+        # nariz y el contorno se ven, sin oscurecer el borde redondeado.
+        zf = tris.mean(axis=1)[:, 2]
+        front_facing = n[:, 2] > 0.5
+        f = np.clip((zf - (FRONT_Z - 1.3)) / 1.3, 0.45, 1.0)
+        f = np.where(front_facing, f, 1.0)
+        colors = colors * f[:, None]
     # ordenar por profundidad segun la camara (painter's algorithm aproximado)
     e, a = np.deg2rad(elev), np.deg2rad(azim)
     view = np.array([np.cos(e) * np.cos(a), np.cos(e) * np.sin(a), np.sin(e)])
@@ -45,8 +56,8 @@ fig = plt.figure(figsize=(12, 5), facecolor="white")
 # El frente (cara) mira hacia +Z. matplotlib toma +Z como "arriba":
 # para ver la cara de frente miramos casi por el eje +Z (elev alto).
 ax1 = fig.add_subplot(1, 2, 1, projection="3d")
-render(ax1, elev=88, azim=-90, light_dir=[0.5, 0.45, 0.74])
-ax1.set_title("Vista frontal (la carita)", fontsize=12)
+render(ax1, elev=88, azim=-90, light_dir=[0.3, 0.3, 0.9], depth_shade=True)
+ax1.set_title("Vista frontal (la carita, plana)", fontsize=12)
 
 ax2 = fig.add_subplot(1, 2, 2, projection="3d")
 render(ax2, elev=32, azim=-60, light_dir=[0.4, -0.5, 0.75])
