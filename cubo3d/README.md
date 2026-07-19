@@ -31,7 +31,9 @@ sistema de coordenadas, así que al cargarlas juntas caen exactamente en su luga
 - **Panel crema:** 38 × 24 mm (rectangular), grosor 1.8 mm, embutido al ras
 - **Ojos:** Ø 3.4 mm, negros, relieve de 1.2 mm
 - **Nariz:** Ø 1.4 mm, crema (mismo color de la cara), relieve suave de 0.5 mm
-- Las 3 piezas son mallas **cerradas (watertight)**.
+- **Alojamiento NFC** en la base: **Ø 26 mm × 2.5 mm de profundidad** (tag de 25 mm + holgura)
+- **Orificio para cuerdita** (llavero) que atraviesa la esquina superior frontal-derecha: **Ø 3.5 mm**
+- Las 3 piezas son mallas **cerradas (watertight)**; el cuerpo es una sola pieza.
 
 ## Cómo imprimirlo a color
 
@@ -58,6 +60,21 @@ multimaterial y no quieres pausas.
 - Relleno: 10–15 % · Paredes: 3 · Soportes: **no** (en la orientación recomendada)
 - Adherencia: *brim* opcional
 
+## Tag NFC y llavero
+
+- **NFC:** en la base hay un rebaje circular de **Ø 26 mm y 2.5 mm de profundidad** para
+  meter un tag NFC de 25 mm. El PLA no bloquea el NFC, así que puedes taparlo con una
+  calcomanía/tapa o pegarlo dentro; el teléfono lo leerá igual. Si tu tag es más grueso,
+  sube `NFC_DEPTH`.
+- **Llavero:** un orificio de **Ø 3.5 mm** atraviesa la esquina superior para pasar una
+  cuerdita/cordón y colgarlo. El puente de material sobre el orificio es de ~2 mm.
+
+**Orientación de impresión recomendada:** acostado sobre la **cara trasera** (la carita
+mirando hacia arriba). Así: (1) los cambios de color quedan en capas limpias; (2) el
+alojamiento NFC queda como un hueco lateral poco profundo que puentea sin soportes; y
+(3) el orificio de la cuerdita imprime bien. Si prefieres imprimirlo de pie sobre la
+base, activa soportes solo dentro del alojamiento NFC.
+
 ## Personalizarlo
 
 Todos los parámetros (en mm) están al inicio de `generar_cubo.py`:
@@ -67,6 +84,8 @@ Todos los parámetros (en mm) están al inicio de `generar_cubo.py`:
 - `RELIEF`, `EMBED` → cuánto sobresalen / se hunden los ojos
 - `EYE_DX`, `EYE_DY`, `EYE_R` → posición y tamaño de los ojos
 - `NOSE_DY`, `NOSE_R`, `NOSE_RELIEF` → posición, tamaño y relieve de la naricita
+- `NFC_DIAM`, `NFC_DEPTH` → diámetro y profundidad del alojamiento del tag NFC
+- `KR_R`, `KR_A` → radio del orificio de la cuerdita y su cercanía a la punta de la esquina
 - `COL_*` → colores de la previsualización
 - `VOXEL` → resolución de la malla (menor = más detalle, más lento)
 

@@ -55,6 +55,14 @@ NOSE_DY = -4.0    # altura de la nariz respecto al centro del panel
 NOSE_R = 0.7      # radio de la nariz (muy pequena)
 NOSE_RELIEF = 0.5 # cuanto sobresale la nariz (relieve suave)
 
+# Alojamiento para tag NFC en la BASE (cara -Y)
+NFC_DIAM = 26.0   # diametro del rebaje (tag de 25 mm + holgura)
+NFC_DEPTH = 2.5   # profundidad del rebaje
+
+# Orificio para cuerdita (llavero) que atraviesa una esquina superior
+KR_R = 1.75       # radio del orificio (~3.5 mm) -> pasa una cuerdita
+KR_A = 9.5        # cercania a la punta de la esquina (dist. desde el centro de la esquina)
+
 # Resolucion de la grilla (mm/voxel). Mas pequeno = mas detalle y mas lento.
 VOXEL = 0.45
 
@@ -107,19 +115,39 @@ def cylinder_field(X, Y, Z, cx, cy, r, z0, z1):
     return op_intersect(radial, z_slab(Z, z0, z1))
 
 
+def cylinder_axis_field(X, Y, Z, A, u, r):
+    """Cilindro infinito de radio r con eje que pasa por A en direccion u (unitaria)."""
+    px, py, pz = X - A[0], Y - A[1], Z - A[2]
+    dot = px * u[0] + py * u[1] + pz * u[2]
+    ex, ey, ez = px - dot * u[0], py - dot * u[1], pz - dot * u[2]
+    return np.sqrt(ex * ex + ey * ey + ez * ez) - r
+
+
+def sphere_field(X, Y, Z, C, r):
+    return np.sqrt((X - C[0])**2 + (Y - C[1])**2 + (Z - C[2])**2) - r
+
+
 # ----------------------------------------------------------------------------
 # Malla desde un campo SDF
 # ----------------------------------------------------------------------------
-def mesh_from_field(field, origin, spacing, name):
+def mesh_from_field(field, origin, spacing, name, min_vol_mm3=1.0):
     verts, faces, _, _ = measure.marching_cubes(field, level=0.0, spacing=spacing)
     verts = verts + np.asarray(origin)
     m = trimesh.Trimesh(vertices=verts, faces=faces, process=True)
+    # 1) limpieza -> malla cerrada
     m.update_faces(m.unique_faces())
     m.update_faces(m.nondegenerate_faces())
     m.remove_unreferenced_vertices()
     trimesh.repair.fix_normals(m)
-    print(f"  [{name}] caras={len(m.faces):,}  watertight={m.is_watertight}  "
-          f"vol={m.volume/1000:.2f} cm3")
+    # 2) descartar componentes minusculos (artefactos de mallado) conservando
+    #    piezas reales (p.ej. los dos ojos son 2 componentes validos)
+    comps = m.split(only_watertight=False)
+    if len(comps) > 1:
+        keep = [c for c in comps if abs(c.volume) >= min_vol_mm3]
+        if keep:
+            m = trimesh.util.concatenate(keep)
+    print(f"  [{name}] caras={len(m.faces):,}  piezas={m.body_count}  "
+          f"watertight={m.is_watertight}  vol={m.volume/1000:.2f} cm3")
     return m
 
 
@@ -162,8 +190,26 @@ def main():
     body = sdf_round_box(np.stack([X, Y, Z], axis=-1), (W/2 - R, H/2 - R, D/2 - R), R)
     pocket = op_intersect(rr, (pocket_floor - Z))   # footprint del panel, z>pocket_floor
     body = op_subtract(body, pocket)
+
+    # Rebaje para el tag NFC en la base (-Y): cilindro vertical desde la base
+    nfc_radial = np.hypot(X, Z) - NFC_DIAM / 2.0
+    nfc_floor = -H / 2 + NFC_DEPTH
+    nfc = op_intersect(nfc_radial, Y - nfc_floor)   # dentro del circulo y por debajo del techo
+    body = op_subtract(body, nfc)
+
+    # Orificio para cuerdita: atraviesa la esquina superior frontal-derecha.
+    # Cilindro diagonal cerca de la punta, confinado a la esquina para que
+    # entre y salga limpio por la superficie redondeada (sin canales largos).
+    Cc = np.array([W / 2 - R, H / 2 - R, D / 2 - R])   # centro de la esquina
+    nvec = np.array([1.0, 1.0, 1.0]) / np.sqrt(3)      # diagonal hacia la punta
+    A = Cc + KR_A * nvec                               # eje cerca de la punta
+    u = np.array([1.0, -1.0, 0.0]) / np.sqrt(2)        # direccion del orificio
+    kr = cylinder_axis_field(X, Y, Z, A, u, KR_R)
+    kr = op_intersect(kr, sphere_field(X, Y, Z, Cc, R + 3))  # confinar a la esquina
+    body = op_subtract(body, kr)
+
     m_body = mesh_from_field(body, origin, spacing, "cuerpo")
-    del body, pocket
+    del body, pocket, nfc, kr
 
     # --- Panel crema: loza que rellena el rebaje, + nariz, - huecos de ojos ---
     panel = op_intersect(rr, z_slab(Z, pocket_floor, front_z))
