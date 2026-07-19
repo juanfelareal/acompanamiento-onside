@@ -10,7 +10,7 @@ import trimesh
 PARTS = [
     ("cuerpo_amarillo.stl", np.array([0.95, 0.80, 0.16])),
     ("cara_crema.stl",      np.array([0.98, 0.92, 0.80])),
-    ("ojos_nariz_negro.stl", np.array([0.10, 0.10, 0.10])),
+    ("ojos_negro.stl",      np.array([0.10, 0.10, 0.10])),
 ]
 
 tris_list, base_list = [], []

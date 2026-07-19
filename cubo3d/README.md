@@ -12,8 +12,8 @@ crema, y ojos + nariz negros en relieve**.
 | Archivo | Color | Qué es |
 |---|---|---|
 | `cuerpo_amarillo.stl` | amarillo | el cubo, con el rebaje donde encaja la cara |
-| `cara_crema.stl` | crema | el panel de la carita, queda **al ras** del cuerpo |
-| `ojos_nariz_negro.stl` | negro | los dos ojos y la nariz, **en relieve** (sobresalen) |
+| `cara_crema.stl` | crema | el panel de la carita **+ la naricita**, queda **al ras** del cuerpo |
+| `ojos_negro.stl` | negro | los dos ojos, **en relieve** (sobresalen) |
 
 ### Modelo a color (para ver / compartir, NO para imprimir directo)
 | Archivo | Qué es |
@@ -27,9 +27,10 @@ sistema de coordenadas, así que al cargarlas juntas caen exactamente en su luga
 
 ## Especificaciones
 
-- **Dimensiones:** 60 × 56 × 55 mm (el relieve de ojos/nariz añade ~1 mm al fondo)
-- **Panel crema:** 32 × 24 mm, grosor 1.8 mm, embutido al ras en la cara frontal
-- **Ojos:** Ø 6.8 mm · **Nariz:** Ø 2.8 mm · relieve de 1.2 mm
+- **Dimensiones:** 60 × 56 × 55 mm (el relieve de los ojos añade ~1 mm al fondo)
+- **Panel crema:** 33 × 21 mm (rectangular), grosor 1.8 mm, embutido al ras
+- **Ojos:** Ø 3.4 mm, negros, relieve de 1.2 mm
+- **Nariz:** Ø 1.4 mm, crema (mismo color de la cara), relieve suave de 0.5 mm
 - Las 3 piezas son mallas **cerradas (watertight)**.
 
 ## Cómo imprimirlo a color
@@ -37,9 +38,9 @@ sistema de coordenadas, así que al cargarlas juntas caen exactamente en su luga
 ### Opción A — Impresora multimaterial (Bambu con AMS, Prusa MMU, etc.)
 1. Abre **`cubo_personaje.3mf`** en tu slicer (trae las 3 piezas y los colores), **o**
    importa los 3 STL juntos: al preguntar *"¿cargar como un solo objeto?"* di **sí**.
-2. Asigna un filamento a cada pieza: amarillo al cuerpo, crema a la cara, negro a ojos/nariz.
+2. Asigna un filamento a cada pieza: amarillo al cuerpo, crema a la cara (con la naricita) y negro a los ojos.
 3. Orientación recomendada: **acostado sobre la cara trasera** (la carita mirando hacia
-   arriba). Así los cambios de color quedan por capas limpias y los ojos/nariz salen
+   arriba). Así los cambios de color quedan por capas limpias y los ojos salen
    hacia arriba **sin necesidad de soportes**.
 
 ### Opción B — Impresora de un solo color (cambio manual de filamento)
@@ -63,8 +64,9 @@ Todos los parámetros (en mm) están al inicio de `generar_cubo.py`:
 
 - `W`, `H`, `D`, `R` → tamaño y redondeo del cubo
 - `FACE_W`, `FACE_H`, `FACE_R`, `FACE_CY`, `PANEL_T` → panel de la cara
-- `RELIEF`, `EMBED` → cuánto sobresalen / se hunden los ojos y la nariz
-- `EYE_DX`, `EYE_DY`, `EYE_R`, `NOSE_DY`, `NOSE_R` → posición y tamaño de ojos/nariz
+- `RELIEF`, `EMBED` → cuánto sobresalen / se hunden los ojos
+- `EYE_DX`, `EYE_DY`, `EYE_R` → posición y tamaño de los ojos
+- `NOSE_DY`, `NOSE_R`, `NOSE_RELIEF` → posición, tamaño y relieve de la naricita
 - `COL_*` → colores de la previsualización
 - `VOXEL` → resolución de la malla (menor = más detalle, más lento)
 
@@ -80,6 +82,6 @@ python3 preview.py        # (opcional) regenera preview.png
 
 Se define cada color como un **campo de distancia con signo (SDF)** y se combinan con
 operaciones booleanas: el cuerpo es un cubo redondeado con un rebaje; el panel rellena
-ese rebaje (menos los huecos de los ojos/nariz); y los ojos/nariz son cilindros que
-sobresalen en relieve. Cada pieza se convierte en malla con **marching cubes**,
+ese rebaje, con la naricita crema, menos los huecos de los ojos; y los ojos son
+cilindros negros que sobresalen en relieve. Cada pieza se convierte en malla con **marching cubes**,
 quedando cerrada y lista para imprimir.

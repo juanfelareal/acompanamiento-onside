@@ -4,9 +4,9 @@ Genera un personaje 3D tipo cubo redondeado (como el de la foto de referencia),
 SIN paticas, MULTICOLOR y en 3 piezas registradas (misma posicion) para
 impresion 3D a color:
 
-  1. cuerpo_amarillo.stl  -> el cubo (amarillo)
-  2. cara_crema.stl       -> el panel de la carita, al ras del cuerpo (crema)
-  3. ojos_nariz_negro.stl -> dos ojos + nariz, EN RELIEVE (negro)
+  1. cuerpo_amarillo.stl -> el cubo (amarillo)
+  2. cara_crema.stl      -> el panel de la carita + la naricita, al ras (crema)
+  3. ojos_negro.stl      -> los dos ojos, EN RELIEVE (negro)
 
 Las 3 piezas encajan como un rompecabezas (no se solapan). En tu slicer las
 cargas juntas y le asignas un filamento a cada una; o las imprimes por separado
@@ -36,9 +36,9 @@ D = 54.0     # fondo  (Z)  -> la cara mira hacia +Z
 R = 13.0     # redondeo de esquinas/aristas
 
 # Panel de la cara (crema), al ras de la cara frontal (embutido en un rebaje)
-FACE_W = 32.0     # ancho del panel
-FACE_H = 24.0     # alto del panel
-FACE_R = 7.0      # redondeo de las esquinas del panel
+FACE_W = 33.0     # ancho del panel (mas ancho -> mas rectangular)
+FACE_H = 21.0     # alto del panel  (mas bajo  -> menos cuadrado)
+FACE_R = 6.0      # redondeo de las esquinas del panel
 FACE_CY = 2.0     # desplazamiento vertical del centro del panel (+ = arriba)
 PANEL_T = 1.8     # grosor del panel = profundidad del rebaje (queda al ras)
 
@@ -47,11 +47,13 @@ RELIEF = 1.2      # cuanto sobresalen respecto a la cara frontal
 EMBED = 1.0       # cuanto se hunden dentro del panel crema (para que peguen)
 
 EYE_DX = 9.5      # separacion horizontal de los ojos
-EYE_DY = 3.5      # altura de los ojos respecto al centro del panel
-EYE_R = 3.4       # radio del ojo
+EYE_DY = 2.5      # altura de los ojos respecto al centro del panel
+EYE_R = 1.7       # radio del ojo (50% mas pequenos)
 
-NOSE_DY = -5.5    # altura de la nariz respecto al centro del panel
-NOSE_R = 1.4      # radio de la nariz
+# Nariz: bultito EN RELIEVE del MISMO color crema de la cara, muy pequena
+NOSE_DY = -4.0    # altura de la nariz respecto al centro del panel
+NOSE_R = 0.7      # radio de la nariz (muy pequena)
+NOSE_RELIEF = 0.5 # cuanto sobresale la nariz (relieve suave)
 
 # Resolucion de la grilla (mm/voxel). Mas pequeno = mas detalle y mas lento.
 VOXEL = 0.45
@@ -146,11 +148,14 @@ def main():
     black_back = front_z - EMBED      # los ojos/nariz se hunden hasta aca
     black_front = front_z + RELIEF    # y sobresalen hasta aca
 
-    # --- Solido negro (ojos + nariz), en relieve ---
+    # --- Solido negro: SOLO los ojos, en relieve ---
     eye_l = cylinder_field(X, Y, Z, -EYE_DX, FACE_CY + EYE_DY, EYE_R, black_back, black_front)
     eye_r = cylinder_field(X, Y, Z,  EYE_DX, FACE_CY + EYE_DY, EYE_R, black_back, black_front)
-    nose = cylinder_field(X, Y, Z, 0.0, FACE_CY + NOSE_DY, NOSE_R, black_back, black_front)
-    black = op_union(op_union(eye_l, eye_r), nose)
+    black = op_union(eye_l, eye_r)
+
+    # --- Nariz: bultito crema (mismo color de la cara), muy pequeno ---
+    nose_bump = cylinder_field(X, Y, Z, 0.0, FACE_CY + NOSE_DY, NOSE_R,
+                               pocket_floor, front_z + NOSE_RELIEF)
 
     print("Extrayendo mallas...")
     # --- Cuerpo amarillo: cubo redondeado menos el rebaje del panel ---
@@ -160,21 +165,22 @@ def main():
     m_body = mesh_from_field(body, origin, spacing, "cuerpo")
     del body, pocket
 
-    # --- Panel crema: loza que rellena el rebaje, menos los huecos negros ---
+    # --- Panel crema: loza que rellena el rebaje, + nariz, - huecos de ojos ---
     panel = op_intersect(rr, z_slab(Z, pocket_floor, front_z))
-    panel = op_subtract(panel, black)               # deja el hueco para el negro
+    panel = op_union(panel, nose_bump)              # anade la naricita crema
+    panel = op_subtract(panel, black)               # deja el hueco para los ojos
     m_face = mesh_from_field(panel, origin, spacing, "cara")
-    del panel
+    del panel, nose_bump
 
-    # --- Negro: ojos + nariz en relieve ---
-    m_black = mesh_from_field(black, origin, spacing, "ojos_nariz")
+    # --- Negro: los ojos en relieve ---
+    m_black = mesh_from_field(black, origin, spacing, "ojos")
     del black
 
     # Exportar STLs (una pieza por color, registradas)
     m_body.export("cuerpo_amarillo.stl")
     m_face.export("cara_crema.stl")
-    m_black.export("ojos_nariz_negro.stl")
-    print("\nSTLs: cuerpo_amarillo.stl, cara_crema.stl, ojos_nariz_negro.stl")
+    m_black.export("ojos_negro.stl")
+    print("\nSTLs: cuerpo_amarillo.stl, cara_crema.stl, ojos_negro.stl")
 
     # Escena a color para previsualizar / compartir
     m_body.visual.face_colors = COL_BODY
