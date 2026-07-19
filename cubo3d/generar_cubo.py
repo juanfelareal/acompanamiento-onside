@@ -55,11 +55,13 @@ NOSE_DY = -4.0    # altura de la nariz respecto al centro del panel
 NOSE_R = 0.7      # radio de la nariz (muy pequena)
 NOSE_RELIEF = 0.5 # cuanto sobresale la nariz (relieve suave)
 
-# Alojamiento para tag NFC en la BASE (cara -Y), OCULTO con una tapa
+# Cavidad INTERNA para el tag NFC, cerca de la base (-Y).
+# El cubo queda SOLIDO por fuera (sin orificio): el tag se sella dentro durante
+# la impresion (pausa -> se coloca el tag -> se reanuda). Queda imperceptible,
+# bloqueado y no removible.
 NFC_DIAM = 26.0   # diametro de la cavidad (tag de 25 mm + holgura)
-NFC_DEPTH = 3.6   # profundidad total de la cavidad (tag + tapa)
-CAP_T = 1.8       # grosor de la tapa que oculta el tag (queda al ras de la base)
-CAP_CLEAR = 0.3   # holgura radial de la tapa (para pegar/encajar)
+NFC_SKIN = 1.2    # grosor de material solido entre la cavidad y la base
+NFC_CAV_H = 1.6   # alto de la cavidad interna (grosor del tag + holgura)
 
 # Orificio para cuerdita (llavero) que atraviesa una esquina superior
 KR_R = 1.75       # radio del orificio (~3.5 mm) -> pasa una cuerdita
@@ -193,10 +195,15 @@ def main():
     pocket = op_intersect(rr, (pocket_floor - Z))   # footprint del panel, z>pocket_floor
     body = op_subtract(body, pocket)
 
-    # Rebaje para el tag NFC en la base (-Y): cilindro vertical desde la base
+    # Cavidad INTERNA para el tag NFC, cerca de la base (-Y).
+    # Es un hueco cerrado (no toca ninguna cara) -> el cubo se ve solido por
+    # fuera. El tag se sella dentro durante la impresion.
     nfc_radial = np.hypot(X, Z) - NFC_DIAM / 2.0
-    nfc_floor = -H / 2 + NFC_DEPTH
-    nfc = op_intersect(nfc_radial, Y - nfc_floor)   # dentro del circulo y por debajo del techo
+    nfc_y0 = -H / 2 + NFC_SKIN            # techo de la piel solida hacia la base
+    nfc_y1 = nfc_y0 + NFC_CAV_H           # techo de la cavidad
+    nfc_yc = 0.5 * (nfc_y0 + nfc_y1)
+    nfc_yslab = np.abs(Y - nfc_yc) - 0.5 * NFC_CAV_H
+    nfc = op_intersect(nfc_radial, nfc_yslab)
     body = op_subtract(body, nfc)
 
     # Orificio para cuerdita: atraviesa la esquina superior frontal-derecha.
@@ -224,27 +231,17 @@ def main():
     m_black = mesh_from_field(black, origin, spacing, "ojos")
     del black
 
-    # --- Tapa NFC (amarilla): disco que cierra la cavidad al ras de la base ---
-    cap_radial = np.hypot(X, Z) - (NFC_DIAM / 2.0 - CAP_CLEAR)
-    cap_yc = -H / 2 + CAP_T / 2.0
-    cap_yslab = np.abs(Y - cap_yc) - CAP_T / 2.0
-    cap = op_intersect(cap_radial, cap_yslab)
-    m_cap = mesh_from_field(cap, origin, spacing, "tapa_nfc")
-    del cap
-
     # Exportar STLs (una pieza por color, registradas)
     m_body.export("cuerpo_amarillo.stl")
     m_face.export("cara_crema.stl")
     m_black.export("ojos_negro.stl")
-    m_cap.export("tapa_nfc_amarilla.stl")
-    print("\nSTLs: cuerpo_amarillo.stl, cara_crema.stl, ojos_negro.stl, tapa_nfc_amarilla.stl")
+    print("\nSTLs: cuerpo_amarillo.stl, cara_crema.stl, ojos_negro.stl")
 
     # Escena a color para previsualizar / compartir
     m_body.visual.face_colors = COL_BODY
     m_face.visual.face_colors = COL_FACE
     m_black.visual.face_colors = COL_BLACK
-    m_cap.visual.face_colors = COL_BODY
-    scene = trimesh.Scene([m_body, m_face, m_black, m_cap])
+    scene = trimesh.Scene([m_body, m_face, m_black])
     scene.export("cubo_personaje.glb")
     print("Color: cubo_personaje.glb")
     try:
@@ -253,7 +250,7 @@ def main():
     except Exception as e:
         print(f"(3mf no exportado: {e})")
 
-    b = (m_body + m_face + m_black + m_cap).bounds
+    b = (m_body + m_face + m_black).bounds
     dims = b[1] - b[0]
     print(f"\nDimensiones totales (mm): {dims[0]:.1f} x {dims[1]:.1f} x {dims[2]:.1f}")
 
