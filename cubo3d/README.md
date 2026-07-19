@@ -1,69 +1,85 @@
-# Personaje Cubo 3D 🟨
+# Personaje Cubo 3D — multicolor 🟨⬜⚫
 
-Personaje 3D tipo **cubo redondeado** con carita **plana** (panel + dos ojos + naricita),
-inspirado en la foto de referencia — **sin las paticas**. Listo para imprimir.
-
-La cara es plana (al ras), como en la foto: el panel, los ojos y la nariz son solo
-**grabados muy superficiales (0.7–1 mm)** que sirven de guía para pintarlos de otro
-color (panel crema, ojos negros). No son huecos.
+Personaje 3D tipo **cubo redondeado** con carita, inspirado en la foto de referencia,
+**sin las paticas**. Multicolor como el referente: **cuerpo amarillo, panel de la cara
+crema, y ojos + nariz negros en relieve**.
 
 ![Vista previa](preview.png)
 
 ## Archivos
 
-| Archivo | Descripción |
+### Piezas para imprimir (una por color, ya registradas en la misma posición)
+| Archivo | Color | Qué es |
+|---|---|---|
+| `cuerpo_amarillo.stl` | amarillo | el cubo, con el rebaje donde encaja la cara |
+| `cara_crema.stl` | crema | el panel de la carita, queda **al ras** del cuerpo |
+| `ojos_nariz_negro.stl` | negro | los dos ojos y la nariz, **en relieve** (sobresalen) |
+
+### Modelo a color (para ver / compartir, NO para imprimir directo)
+| Archivo | Qué es |
 |---|---|
-| `cubo_personaje.stl` | **Malla lista para imprimir** (watertight / cerrada) |
-| `generar_cubo.py` | Script que genera el STL (paramétrico) |
-| `preview.py` | Genera la imagen de vista previa |
-| `preview.png` | Render de la vista frontal y 3/4 |
+| `cubo_personaje.glb` | modelo a color (ábrelo en cualquier visor 3D) |
+| `cubo_personaje.3mf` | proyecto multicolor con las 3 piezas y colores |
+| `preview.png` | render de referencia |
 
-## Especificaciones del modelo
+Las 3 piezas encajan como un rompecabezas (no se solapan) y comparten el mismo
+sistema de coordenadas, así que al cargarlas juntas caen exactamente en su lugar.
 
-- **Dimensiones:** 60 × 56 × 54 mm (ancho × alto × fondo)
-- **Volumen sólido:** ~158 cm³ (se imprime con relleno, no macizo)
-- **Malla cerrada (watertight):** sí → apta para *slicing* directo
-- La cara mira hacia el frente; la base es plana-redondeada y **no necesita soportes**.
+## Especificaciones
 
-## Cómo imprimirlo
+- **Dimensiones:** 60 × 56 × 55 mm (el relieve de ojos/nariz añade ~1 mm al fondo)
+- **Panel crema:** 32 × 24 mm, grosor 1.8 mm, embutido al ras en la cara frontal
+- **Ojos:** Ø 6.8 mm · **Nariz:** Ø 2.8 mm · relieve de 1.2 mm
+- Las 3 piezas son mallas **cerradas (watertight)**.
 
-1. Abre `cubo_personaje.stl` en tu *slicer* (Cura, PrusaSlicer, Bambu Studio, etc.).
-2. Orientación: déjalo **de pie apoyado en su base** (como en la vista previa). La carita
-   queda vertical, así que la impresión no requiere soportes.
-3. Ajustes recomendados (punto de partida):
-   - **Altura de capa:** 0.2 mm (0.12–0.16 mm si quieres la superficie más lisa)
-   - **Relleno:** 10–15 %
-   - **Paredes/perímetros:** 3
-   - **Soportes:** no
-   - **Balsa/brim:** *brim* opcional para mejor adherencia
-   - **Material:** PLA amarillo para clavar el look de la foto 😄
-4. La cara es plana. Los ojos, la nariz y el contorno del panel son grabados muy
-   superficiales: después de imprimir, píntalos (panel crema, ojos y nariz negros)
-   con marcador o pintura acrílica para que queden igual que la foto.
+## Cómo imprimirlo a color
+
+### Opción A — Impresora multimaterial (Bambu con AMS, Prusa MMU, etc.)
+1. Abre **`cubo_personaje.3mf`** en tu slicer (trae las 3 piezas y los colores), **o**
+   importa los 3 STL juntos: al preguntar *"¿cargar como un solo objeto?"* di **sí**.
+2. Asigna un filamento a cada pieza: amarillo al cuerpo, crema a la cara, negro a ojos/nariz.
+3. Orientación recomendada: **acostado sobre la cara trasera** (la carita mirando hacia
+   arriba). Así los cambios de color quedan por capas limpias y los ojos/nariz salen
+   hacia arriba **sin necesidad de soportes**.
+
+### Opción B — Impresora de un solo color (cambio manual de filamento)
+1. Carga el `.3mf` o los 3 STL como un solo objeto.
+2. Usa la función *"cambio de filamento por altura/pausa"* (o *Color Change*) de tu
+   slicer para cambiar de amarillo → crema → negro según sube la impresión.
+3. Misma orientación: carita hacia arriba.
+
+### Opción C — Piezas por separado y ensamblar
+Imprime cada STL con su filamento y pégalas (encajan por diseño). Útil si no tienes
+multimaterial y no quieres pausas.
+
+### Ajustes sugeridos (punto de partida)
+- Altura de capa: **0.2 mm** (0.12–0.16 mm para más detalle)
+- Relleno: 10–15 % · Paredes: 3 · Soportes: **no** (en la orientación recomendada)
+- Adherencia: *brim* opcional
 
 ## Personalizarlo
 
-Todos los parámetros están arriba en `generar_cubo.py` (en milímetros). Puedes cambiar:
+Todos los parámetros (en mm) están al inicio de `generar_cubo.py`:
 
-- `W`, `H`, `D` → tamaño del cubo
-- `R` → qué tan redondeadas son las esquinas (más grande = más "blandito")
-- `FACE_W`, `FACE_H`, `FACE_OUTLINE_DEPTH`, `FACE_OUTLINE_WIDTH` → panel de la cara
-- `EYE_DX`, `EYE_DY`, `EYE_R`, `EYE_DEPTH` → posición/tamaño/profundidad de los ojos
-- `NOSE_*` → la naricita
-- `VOXEL` → resolución de la malla (más pequeño = más detalle, más lento)
+- `W`, `H`, `D`, `R` → tamaño y redondeo del cubo
+- `FACE_W`, `FACE_H`, `FACE_R`, `FACE_CY`, `PANEL_T` → panel de la cara
+- `RELIEF`, `EMBED` → cuánto sobresalen / se hunden los ojos y la nariz
+- `EYE_DX`, `EYE_DY`, `EYE_R`, `NOSE_DY`, `NOSE_R` → posición y tamaño de ojos/nariz
+- `COL_*` → colores de la previsualización
+- `VOXEL` → resolución de la malla (menor = más detalle, más lento)
 
-Luego vuelve a generar:
+Regenerar:
 
 ```bash
-pip install numpy scikit-image trimesh   # dependencias
-python3 generar_cubo.py                  # genera cubo_personaje.stl
-python3 preview.py                       # (opcional) regenera preview.png
+pip install numpy scikit-image trimesh matplotlib lxml
+python3 generar_cubo.py   # genera los STL + glb + 3mf
+python3 preview.py        # (opcional) regenera preview.png
 ```
 
 ## Cómo está hecho
 
-El modelo se construye con una **función de distancia con signo (SDF)**: se define el
-cuerpo como un cubo redondeado con la cara frontal plana, y se le *restan* (booleano)
-grabados superficiales: el contorno del panel y los discos de los ojos y la nariz.
-Luego se extrae la superficie con **marching cubes**, lo que produce una malla suave y
-cerrada, ideal para impresión 3D.
+Se define cada color como un **campo de distancia con signo (SDF)** y se combinan con
+operaciones booleanas: el cuerpo es un cubo redondeado con un rebaje; el panel rellena
+ese rebaje (menos los huecos de los ojos/nariz); y los ojos/nariz son cilindros que
+sobresalen en relieve. Cada pieza se convierte en malla con **marching cubes**,
+quedando cerrada y lista para imprimir.
