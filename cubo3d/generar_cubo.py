@@ -32,12 +32,12 @@ import trimesh
 # Cuerpo (cubo redondeado)
 W = 60.0     # ancho  (X)
 H = 56.0     # alto   (Y)
-D = 54.0     # fondo  (Z)  -> la cara mira hacia +Z
+D = 46.0     # fondo  (Z)  -> la cara mira hacia +Z (mas delgado)
 R = 13.0     # redondeo de esquinas/aristas
 
 # Panel de la cara (crema), al ras de la cara frontal (embutido en un rebaje)
-FACE_W = 33.0     # ancho del panel (mas ancho -> mas rectangular)
-FACE_H = 21.0     # alto del panel  (mas bajo  -> menos cuadrado)
+FACE_W = 38.0     # ancho del panel (mas ancho -> mas rectangular)
+FACE_H = 24.0     # alto del panel  (mas bajo  -> menos cuadrado)
 FACE_R = 6.0      # redondeo de las esquinas del panel
 FACE_CY = 2.0     # desplazamiento vertical del centro del panel (+ = arriba)
 PANEL_T = 1.8     # grosor del panel = profundidad del rebaje (queda al ras)

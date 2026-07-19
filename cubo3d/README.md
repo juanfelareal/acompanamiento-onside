@@ -27,8 +27,8 @@ sistema de coordenadas, así que al cargarlas juntas caen exactamente en su luga
 
 ## Especificaciones
 
-- **Dimensiones:** 60 × 56 × 55 mm (el relieve de los ojos añade ~1 mm al fondo)
-- **Panel crema:** 33 × 21 mm (rectangular), grosor 1.8 mm, embutido al ras
+- **Dimensiones:** 60 × 56 × 47 mm (más delgado; el relieve de los ojos añade ~1 mm al fondo)
+- **Panel crema:** 38 × 24 mm (rectangular), grosor 1.8 mm, embutido al ras
 - **Ojos:** Ø 3.4 mm, negros, relieve de 1.2 mm
 - **Nariz:** Ø 1.4 mm, crema (mismo color de la cara), relieve suave de 0.5 mm
 - Las 3 piezas son mallas **cerradas (watertight)**.
