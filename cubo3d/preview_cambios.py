@@ -49,7 +49,7 @@ def draw(ax, elev, azim, light_dir, xform=None, title="", lim=30):
 fig = plt.figure(figsize=(15, 5), facecolor="white")
 
 ax1 = fig.add_subplot(1, 3, 1, projection="3d")
-draw(ax1, 88, -90, [0.25, 0.2, 0.95], title="Frontal (ojos + separados, nariz +15%)")
+draw(ax1, 88, -90, [0.25, 0.2, 0.95], title="Frontal (ojos +15% más grandes)")
 
 ax2 = fig.add_subplot(1, 3, 2, projection="3d")
 draw(ax2, 50, -74, [0.35, 0.5, 0.8], title="3/4 (se ve la carita abombada)")

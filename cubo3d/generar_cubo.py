@@ -49,7 +49,7 @@ EMBED = 1.0       # cuanto se hunden dentro del panel crema (para que peguen)
 
 EYE_DX = 11.5     # separacion horizontal de los ojos (un poco mas separados)
 EYE_DY = 2.5      # altura de los ojos respecto al centro del panel
-EYE_R = 1.7       # radio del ojo (50% mas pequenos)
+EYE_R = 1.95      # radio del ojo (15% mas grande)
 
 # Nariz: bultito EN RELIEVE del MISMO color crema de la cara, muy pequena
 NOSE_DY = -4.0    # altura de la nariz respecto al centro del panel
