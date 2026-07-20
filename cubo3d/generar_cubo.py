@@ -30,44 +30,51 @@ import trimesh
 # ----------------------------------------------------------------------------
 # PARAMETROS (en milimetros)
 # ----------------------------------------------------------------------------
+# ESCALA GLOBAL: el diseno de referencia da un Bloki de 56 mm de alto. Se
+# escala todo proporcionalmente para que la ALTURA final sea TARGET_H.
+# El tag NFC y el orificio del cordon NO se escalan (son piezas/funciones reales).
+TARGET_H = 45.0            # altura final del Bloki (mm)
+S = TARGET_H / 56.0        # factor de escala proporcional
+
 # Cuerpo (cubo redondeado)
-W = 60.0     # ancho  (X)
-H = 56.0     # alto   (Y)
-D = 46.0     # fondo  (Z)  -> la cara mira hacia +Z (mas delgado)
-R = 13.0     # redondeo de esquinas/aristas
+W = 60.0 * S   # ancho  (X)
+H = 56.0 * S   # alto   (Y) = TARGET_H
+D = 46.0 * S   # fondo  (Z)  -> la cara mira hacia +Z
+R = 13.0 * S   # redondeo de esquinas/aristas
 
-# Panel de la cara (crema), al ras de la cara frontal (embutido en un rebaje)
-FACE_W = 41.8     # ancho del panel (10% mas grande, proporcional)
-FACE_H = 23.1     # alto del panel  (10% mas grande, proporcional)
-FACE_R = 6.6      # redondeo de las esquinas del panel
-FACE_CY = 4.5     # desplazamiento vertical del centro del panel (+ = arriba)
-PANEL_T = 1.8     # grosor del panel = profundidad del rebaje (queda al ras)
-FACE_BULGE = 1.5  # abombamiento del panel (0 = plano; >0 = carita con redondez)
+# Panel de la cara (crema), embutido en la cara frontal
+FACE_W = 41.8 * S
+FACE_H = 23.1 * S
+FACE_R = 6.6 * S
+FACE_CY = 4.5 * S    # desplazamiento vertical del centro del panel (+ = arriba)
+PANEL_T = 1.8 * S    # grosor del panel = profundidad del rebaje
+FACE_BULGE = 1.5 * S # abombamiento del panel (carita con redondez)
 
-# Ojos y nariz (negros) EN RELIEVE (sobresalen de la cara)
-RELIEF = 1.2      # cuanto sobresalen respecto a la cara frontal
-EMBED = 1.0       # cuanto se hunden dentro del panel crema (para que peguen)
+# Ojos y nariz EN RELIEVE
+RELIEF = 1.2 * S     # cuanto sobresalen los ojos
+EMBED = 1.0 * S      # cuanto se hunden dentro del panel
 
-EYE_DX = 13.0     # separacion horizontal de los ojos (un poco mas separados)
-EYE_DY = -0.5     # altura de los ojos respecto al centro (bajados un poco)
-EYE_R = 2.46      # radio del ojo (10% mas grande)
+EYE_DX = 13.0 * S    # separacion horizontal de los ojos
+EYE_DY = -0.5 * S    # altura de los ojos respecto al centro
+EYE_R = 2.46 * S     # radio del ojo
 
-# Nariz: bolita (esferita) del MISMO color crema, que sobresale de la cara
-NOSE_DY = -6.0      # altura de la nariz respecto al centro del panel (bajada con los ojos)
-NOSE_R = 1.6        # radio de la bolita de la nariz
-NOSE_PROTRUDE = 1.5 # cuanto sobresale la bolita por encima de la superficie
+# Nariz: bolita (esferita) crema que sobresale de la cara
+NOSE_DY = -6.0 * S       # altura de la nariz respecto al centro del panel
+NOSE_R = 1.6 * S         # radio de la bolita de la nariz
+NOSE_PROTRUDE = 1.5 * S  # cuanto sobresale la bolita
 
 # Cavidad INTERNA para el tag NFC, DETRAS de la carita (lado +Z).
-# Asi se imprime con la carita hacia arriba (pocos cambios de color) y la
-# cavidad se forma abierta hacia arriba: en la pausa se coloca el tag y la
-# impresion lo sella detras de la cara. Queda imperceptible y no removible.
-NFC_DIAM = 26.0   # diametro de la cavidad (tag de 25 mm + holgura)
-NFC_SKIN = 1.2    # pared solida entre la cavidad y el fondo del panel (sella el tag)
-NFC_CAV_H = 1.6   # alto de la cavidad interna (grosor del tag + holgura)
+# TAMANO REAL (NO se escala): tag de 25 mm de diametro x 1.5 mm de alto.
+# Al imprimir con la cara hacia arriba, se abre hacia arriba; en la pausa se
+# coloca el tag y la cara lo sella. Queda imperceptible y no removible.
+NFC_DIAM = 26.0   # diametro de la cavidad (tag 25 mm + 1 mm holgura)
+NFC_SKIN = 1.2    # pared solida que sella el tag (entre cavidad y fondo del panel)
+NFC_CAV_H = 1.7   # alto de la cavidad (tag 1.5 mm + 0.2 mm holgura)
 
-# Orificio para cuerdita (llavero) que atraviesa una esquina superior
-KR_R = 1.75       # radio del orificio (~3.5 mm) -> pasa una cuerdita
-KR_A = 9.5        # cercania a la punta de la esquina (dist. desde el centro de la esquina)
+# Orificio para cordon (llavero) que atraviesa una esquina superior.
+# El radio NO se escala (debe seguir pasando un cordon); la posicion si.
+KR_R = 1.5        # radio del orificio (~3 mm) -> pasa una cuerdita fina
+KR_A = 9.5 * S    # cercania a la punta de la esquina (escala con la esquina)
 
 # Resolucion de la grilla (mm/voxel). Mas pequeno = mas detalle y mas lento.
 VOXEL = 0.45
