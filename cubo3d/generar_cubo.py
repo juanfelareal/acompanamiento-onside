@@ -33,7 +33,7 @@ import trimesh
 # ESCALA GLOBAL: el diseno de referencia da un Bloki de 56 mm de alto. Se
 # escala todo proporcionalmente para que la ALTURA final sea TARGET_H.
 # El tag NFC y el orificio del cordon NO se escalan (son piezas/funciones reales).
-TARGET_H = 45.0            # altura final del Bloki (mm)
+TARGET_H = 38.0            # altura final del Bloki (mm) - minimo para el tag NFC
 S = TARGET_H / 56.0        # factor de escala proporcional
 
 # Cuerpo (cubo redondeado)
@@ -51,14 +51,17 @@ PANEL_T = 1.8 * S    # grosor del panel = profundidad del rebaje
 # Cara PLANA (FACE_BULGE=0): una superficie plana sale lisa en FDM. Un abombado
 # suave produce anillos de capas horribles, por eso se deja plana.
 FACE_BULGE = 0.0     # 0 = plana (lisa). >0 abomba pero sale con anillos de capas.
+# La cara queda un poco HUNDIDA respecto al cuerpo (sutil), no al ras ni saliente.
+FACE_RECESS = 0.6      # mm que se hunde la cara bajo la superficie del cuerpo
 
 # La carita es una PIEZA APARTE que encaja a presion en el rebaje del cuerpo.
 # FIT_CLEAR = holgura (por lado) entre la carita y el rebaje. NO se escala
 # (es tolerancia de impresion). Subelo si queda muy apretada, bajalo si floja.
-FIT_CLEAR = 0.12
-# Los OJOS tambien son piezas aparte (negras) que encajan a presion en la
-# carita. EYE_CLEAR = holgura (por lado) del ojo en su hueco.
-EYE_CLEAR = 0.08
+FIT_CLEAR = 0.06   # mas apretado que antes (0.12 quedaba flojo, tocaba pegar)
+# Los OJOS son piezas aparte (negras) tipo "hongo": vastago fino que entra en un
+# hueco de la carita + cabeza SEMIESFERICA (como la nariz) que queda visible y
+# los retiene (no se salen). El cuerpo los respalda por detras.
+EYE_CLEAR = 0.20   # holgura del vastago del ojo (generosa, para que entre sin lijar)
 
 # Ojos y nariz EN RELIEVE
 RELIEF = 1.2 * S     # cuanto sobresalen los ojos
@@ -271,41 +274,37 @@ def main():
     print("Construyendo grilla...")
     X, Y, Z, origin, spacing = build_grid()
 
-    front_z = D / 2.0                 # cara frontal (plana) en z = 27
-    pocket_floor = front_z - PANEL_T  # fondo del rebaje del panel
+    front_z = D / 2.0                       # superficie frontal del cuerpo
+    face_top = front_z - FACE_RECESS        # cara HUNDIDA (queda bajo el cuerpo)
+    pocket_floor = face_top - PANEL_T       # fondo del rebaje (respaldo de la carita)
     hx = FACE_W / 2 - FACE_R
     hy = FACE_H / 2 - FACE_R
     rr = sdf_round_rect_2d(X, Y - FACE_CY, hx, hy, FACE_R)  # footprint del panel
 
-    # Dome (abombamiento) del panel: superficie esferica de radio grande que
-    # hace que el centro de la cara sobresalga FACE_BULGE y los bordes queden
-    # casi al ras -> la carita se ve redondeada, no plana.
-    dome_R = (FACE_W / 2.0) ** 2 / (2.0 * FACE_BULGE) if FACE_BULGE > 1e-6 else 1e9
-    dome_zc = front_z + FACE_BULGE - dome_R
-    face_top = front_z + FACE_BULGE   # punto mas alto de la cara
+    # --- Ojos: piezas negras tipo "hongo" (vastago fino + cabeza semiesferica) ---
+    # La cabeza es una semiesfera (como la nariz) que queda visible y, al ser mas
+    # ancha que el hueco, retiene el ojo; el vastago entra en el hueco y el cuerpo
+    # lo respalda por detras. Asi no queda plano ni se sale.
+    eye_shaft_r = EYE_R * 0.6               # radio del vastago (mas fino que la cabeza)
+    eye_pos = [(-EYE_DX, FACE_CY + EYE_DY), (EYE_DX, FACE_CY + EYE_DY)]
 
-    # Los ojos son PIEZAS APARTE (negras). Cada ojo es un cilindro que va desde
-    # el fondo de la carita (pocket_floor, lo tapa el cuerpo al ensamblar) hasta
-    # sobresalir por el frente. Encaja a presion en un hueco de la carita.
-    black_back = pocket_floor            # el ojo llega al fondo (lo respalda el cuerpo)
-    black_front = face_top + RELIEF      # y sobresale por encima del dome
+    black = None
+    eye_holes = None
+    for (ex, ey) in eye_pos:
+        shaft = cylinder_field(X, Y, Z, ex, ey, eye_shaft_r, pocket_floor, face_top)
+        # cabeza: semiesfera (mitad superior de una esfera) apoyada en face_top
+        head = op_intersect(sphere_field(X, Y, Z, [ex, ey, face_top], EYE_R),
+                            (face_top - Z))     # z >= face_top -> mitad de arriba
+        eye = op_union(shaft, head)
+        black = eye if black is None else op_union(black, eye)
+        # hueco en la carita para el vastago (mas grande -> entra sin lijar)
+        h = cylinder_field(X, Y, Z, ex, ey, eye_shaft_r + EYE_CLEAR,
+                           pocket_floor - 1.0, face_top + 1.0)
+        eye_holes = h if eye_holes is None else op_union(eye_holes, h)
 
-    eye_l = cylinder_field(X, Y, Z, -EYE_DX, FACE_CY + EYE_DY, EYE_R, black_back, black_front)
-    eye_r = cylinder_field(X, Y, Z,  EYE_DX, FACE_CY + EYE_DY, EYE_R, black_back, black_front)
-    black = op_union(eye_l, eye_r)
-
-    # Huecos para los ojos en la carita (un poco mas grandes -> encaje a presion)
-    hole_l = cylinder_field(X, Y, Z, -EYE_DX, FACE_CY + EYE_DY, EYE_R + EYE_CLEAR,
-                            pocket_floor - 1.0, black_front + 1.0)
-    hole_r = cylinder_field(X, Y, Z,  EYE_DX, FACE_CY + EYE_DY, EYE_R + EYE_CLEAR,
-                            pocket_floor - 1.0, black_front + 1.0)
-    eye_holes = op_union(hole_l, hole_r)
-
-    # --- Nariz: bolita (esferita) crema que sobresale de la cara curva ---
+    # --- Nariz: bolita (semiesfera) crema que sobresale de la cara plana ---
     ny = FACE_CY + NOSE_DY
-    r_nose = abs(NOSE_DY)                          # distancia al centro del panel
-    dome_z_nose = dome_zc + np.sqrt(dome_R**2 - r_nose**2)  # altura del dome ahi
-    nose_cz = dome_z_nose + NOSE_PROTRUDE - NOSE_R # centro de la esfera
+    nose_cz = face_top + NOSE_PROTRUDE - NOSE_R    # centro de la esfera de la nariz
     nose_bump = sphere_field(X, Y, Z, [0.0, ny, nose_cz], NOSE_R)
 
     print("Extrayendo mallas...")
@@ -328,13 +327,13 @@ def main():
     nfc = op_intersect(nfc_radial, nfc_zslab)
     body = op_subtract(body, nfc)
 
-    # Orificio para cuerdita: atraviesa la esquina superior frontal-derecha.
-    # Cilindro diagonal cerca de la punta, confinado a la esquina para que
-    # entre y salga limpio por la superficie redondeada (sin canales largos).
-    Cc = np.array([W / 2 - R, H / 2 - R, D / 2 - R])   # centro de la esquina
-    nvec = np.array([1.0, 1.0, 1.0]) / np.sqrt(3)      # diagonal hacia la punta
-    A = Cc + KR_A * nvec                               # eje cerca de la punta
-    u = np.array([1.0, -1.0, 0.0]) / np.sqrt(2)        # direccion del orificio
+    # Orificio para cuerdita: atraviesa la esquina superior IZQUIERDA-TRASERA
+    # (la "espalda" de Bloki, no el lado de la cara). Ademas, al imprimir con la
+    # cara hacia arriba, esta esquina queda abajo -> mejor acabado (sin estrias).
+    Cc = np.array([-(W / 2 - R), H / 2 - R, -(D / 2 - R)])  # esquina -X,+Y,-Z
+    nvec = np.array([-1.0, 1.0, -1.0]) / np.sqrt(3)         # diagonal hacia la punta
+    A = Cc + KR_A * nvec                                    # eje cerca de la punta
+    u = np.array([1.0, 1.0, 0.0]) / np.sqrt(2)              # direccion del orificio
     kr = cylinder_axis_field(X, Y, Z, A, u, KR_R)
     kr = op_intersect(kr, sphere_field(X, Y, Z, Cc, R + 3))  # confinar a la esquina
     body = op_subtract(body, kr)
@@ -342,14 +341,12 @@ def main():
     m_body = mesh_from_field(body, origin, spacing, "cuerpo")
     del body, pocket, nfc, kr
 
-    # --- Carita crema (1 color): rebaje + dome + nariz, con HUECOS para los ojos ---
-    panel = op_intersect(rr, (pocket_floor - Z))    # footprint + por encima del piso
-    dome = sphere_field(X, Y, Z, [0.0, FACE_CY, dome_zc], dome_R)
-    panel = op_intersect(panel, dome)               # tapa abombada (redondez)
+    # --- Carita crema (1 color): placa PLANA con nariz y HUECOS para los ojos ---
+    panel = op_intersect(rr, z_slab(Z, pocket_floor, face_top))  # placa plana
     panel = op_union(panel, nose_bump)              # anade la naricita crema
     panel = op_subtract(panel, eye_holes)           # huecos donde encajan los ojos
     m_face = mesh_from_field(panel, origin, spacing, "cara")
-    del panel, nose_bump, dome, eye_holes
+    del panel, nose_bump, eye_holes
 
     # --- Ojos (negro, 1 color): 2 piezas que encajan a presion en la carita ---
     m_black = mesh_from_field(black, origin, spacing, "ojos")
