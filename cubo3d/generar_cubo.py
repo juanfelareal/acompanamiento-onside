@@ -57,12 +57,12 @@ NOSE_DY = -6.0      # altura de la nariz respecto al centro del panel (bajada co
 NOSE_R = 1.6        # radio de la bolita de la nariz
 NOSE_PROTRUDE = 1.5 # cuanto sobresale la bolita por encima de la superficie
 
-# Cavidad INTERNA para el tag NFC, cerca de la base (-Y).
-# El cubo queda SOLIDO por fuera (sin orificio): el tag se sella dentro durante
-# la impresion (pausa -> se coloca el tag -> se reanuda). Queda imperceptible,
-# bloqueado y no removible.
+# Cavidad INTERNA para el tag NFC, DETRAS de la carita (lado +Z).
+# Asi se imprime con la carita hacia arriba (pocos cambios de color) y la
+# cavidad se forma abierta hacia arriba: en la pausa se coloca el tag y la
+# impresion lo sella detras de la cara. Queda imperceptible y no removible.
 NFC_DIAM = 26.0   # diametro de la cavidad (tag de 25 mm + holgura)
-NFC_SKIN = 1.2    # grosor de material solido entre la cavidad y la base
+NFC_SKIN = 1.2    # pared solida entre la cavidad y el fondo del panel (sella el tag)
 NFC_CAV_H = 1.6   # alto de la cavidad interna (grosor del tag + holgura)
 
 # Orificio para cuerdita (llavero) que atraviesa una esquina superior
@@ -264,15 +264,16 @@ def main():
     pocket = op_intersect(rr, (pocket_floor - Z))   # footprint del panel, z>pocket_floor
     body = op_subtract(body, pocket)
 
-    # Cavidad INTERNA para el tag NFC, cerca de la base (-Y).
-    # Es un hueco cerrado (no toca ninguna cara) -> el cubo se ve solido por
-    # fuera. El tag se sella dentro durante la impresion.
-    nfc_radial = np.hypot(X, Z) - NFC_DIAM / 2.0
-    nfc_y0 = -H / 2 + NFC_SKIN            # techo de la piel solida hacia la base
-    nfc_y1 = nfc_y0 + NFC_CAV_H           # techo de la cavidad
-    nfc_yc = 0.5 * (nfc_y0 + nfc_y1)
-    nfc_yslab = np.abs(Y - nfc_yc) - 0.5 * NFC_CAV_H
-    nfc = op_intersect(nfc_radial, nfc_yslab)
+    # Cavidad INTERNA para el tag NFC, DETRAS del panel de la cara (lado +Z).
+    # Disco de eje Z, centrado tras la carita. Es un hueco cerrado (el cubo se
+    # ve solido por fuera). Al imprimir con la cara hacia arriba, se abre hacia
+    # arriba y el tag se coloca en la pausa; luego la cara lo sella.
+    nfc_radial = np.hypot(X - 0.0, Y - FACE_CY) - NFC_DIAM / 2.0
+    nfc_z1 = pocket_floor - NFC_SKIN     # techo de la cavidad (hacia la cara)
+    nfc_z0 = nfc_z1 - NFC_CAV_H          # fondo de la cavidad (hacia atras)
+    nfc_zc = 0.5 * (nfc_z0 + nfc_z1)
+    nfc_zslab = np.abs(Z - nfc_zc) - 0.5 * NFC_CAV_H
+    nfc = op_intersect(nfc_radial, nfc_zslab)
     body = op_subtract(body, nfc)
 
     # Orificio para cuerdita: atraviesa la esquina superior frontal-derecha.
@@ -309,23 +310,16 @@ def main():
     print("\nSTLs: cuerpo_amarillo.stl, cara_crema.stl, ojos_negro.stl")
 
     # --- 3MF multicolor listo para AMS (Bambu Studio A1 Mini) ---
-    # Cada color es una pieza separada dentro de un mismo objeto.
-    # Rotamos para que el modelo entre PARADO SOBRE LA BASE (la base -Y queda
-    # abajo, en la cama). Asi la cavidad del NFC se va formando abierta hacia
-    # arriba durante la impresion y el tag se puede introducir en la pausa.
-    stand = np.array([[1, 0, 0, 0],
-                      [0, 0, -1, 0],
-                      [0, 1, 0, 0],
-                      [0, 0, 0, 1]], dtype=float)
-    mb, mf, mk = m_body.copy(), m_face.copy(), m_black.copy()
-    for mm in (mb, mf, mk):
-        mm.apply_transform(stand)
+    # Orientacion NATIVA: la carita queda hacia arriba (+Z). Asi los cambios de
+    # color solo ocurren en los ultimos mm (la cara) -> minimo desperdicio. La
+    # cavidad del NFC esta detras de la cara y se embebe en la pausa (cerca del
+    # final). Cada color es una pieza separada del mismo objeto (para el AMS).
     export_3mf_ams([
-        (mb, "Amarillo (cuerpo)", "F2CD28"),
-        (mf, "Crema (cara)", "FAEBCD"),
-        (mk, "Negro (ojos)", "1E1E1E"),
+        (m_body, "Amarillo (cuerpo)", "F2CD28"),
+        (m_face, "Crema (cara)", "FAEBCD"),
+        (m_black, "Negro (ojos)", "1E1E1E"),
     ], "Bloki_AMS_A1mini.3mf")
-    print("AMS: Bloki_AMS_A1mini.3mf (parado sobre la base, 3 colores)")
+    print("AMS: Bloki_AMS_A1mini.3mf (carita arriba, 3 colores)")
 
     # Escena a color para previsualizar / compartir
     m_body.visual.face_colors = COL_BODY
