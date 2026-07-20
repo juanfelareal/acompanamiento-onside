@@ -76,8 +76,8 @@ NFC_CAV_H = 1.7   # alto de la cavidad (tag 1.5 mm + 0.2 mm holgura)
 KR_R = 1.5        # radio del orificio (~3 mm) -> pasa una cuerdita fina
 KR_A = 9.5 * S    # cercania a la punta de la esquina (escala con la esquina)
 
-# Resolucion de la grilla (mm/voxel). Mas pequeno = mas detalle y mas lento.
-VOXEL = 0.45
+# Resolucion de la grilla (mm/voxel). Mas pequeno = superficie mas lisa y mas lento.
+VOXEL = 0.30
 
 # Colores (solo para previsualizacion .glb/.3mf)
 COL_BODY = [242, 205, 40, 255]     # amarillo
@@ -143,9 +143,10 @@ def sphere_field(X, Y, Z, C, r):
 def export_3mf_ams(parts, path):
     """Escribe un .3mf multicolor listo para AMS (Bambu Studio).
 
-    parts: lista de (mesh, nombre, hex 'RRGGBB'). Las piezas quedan como
-    COMPONENTES de un mismo objeto, cada una con su color -> al abrir en Bambu
-    Studio se asigna cada color a un slot del AMS y todo imprime alineado.
+    parts: lista de (mesh, nombre, hex 'RRGGBB'). Cada color es un OBJETO
+    separado (build item) con su base material a nivel de objeto, todos
+    registrados en la misma posicion. Es la forma mas estandar y confiable:
+    Bambu Studio lee cada objeto con su color y se asigna al AMS.
     """
     content_types = (
         '<?xml version="1.0" encoding="UTF-8"?>'
@@ -168,8 +169,8 @@ def export_3mf_ams(parts, path):
         out.append(f'<base name="{name}" displaycolor="#{hexc.upper()}FF"/>')
     out.append('</basematerials>')
 
-    ids = []
     oid = 2
+    ids = []
     for i, (mesh, name, hexc) in enumerate(parts):
         V, F = mesh.vertices, mesh.faces
         vtx = "".join("<vertex x=\"%.4f\" y=\"%.4f\" z=\"%.4f\"/>" % (x, y, z)
@@ -181,13 +182,11 @@ def export_3mf_ams(parts, path):
                    f'<triangles>{tri}</triangles></mesh></object>')
         ids.append(oid)
         oid += 1
-
-    out.append(f'<object id="{oid}" type="model"><components>')
-    for j in ids:
-        out.append(f'<component objectid="{j}"/>')
-    out.append('</components></object>')
     out.append('</resources>')
-    out.append(f'<build><item objectid="{oid}"/></build>')
+    out.append('<build>')
+    for j in ids:
+        out.append(f'<item objectid="{j}"/>')   # todos en la misma posicion (registrados)
+    out.append('</build>')
     out.append('</model>')
     model = "".join(out)
 
