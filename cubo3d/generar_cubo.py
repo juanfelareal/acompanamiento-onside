@@ -143,16 +143,17 @@ def sphere_field(X, Y, Z, C, r):
 def export_3mf_ams(parts, path):
     """Escribe un .3mf multicolor listo para AMS (Bambu Studio).
 
-    parts: lista de (mesh, nombre, hex 'RRGGBB'). Cada color es un OBJETO
-    separado (build item) con su base material a nivel de objeto, todos
-    registrados en la misma posicion. Es la forma mas estandar y confiable:
-    Bambu Studio lee cada objeto con su color y se asigna al AMS.
+    parts: lista de (mesh, nombre, hex 'RRGGBB'). Se arma UN objeto con varias
+    PARTES (una por color) usando el formato de Bambu (Metadata/model_settings).
+    Asi Bambu no fusiona nada: ves un objeto con 3 partes y le asignas un
+    filamento (AMS) a cada parte.
     """
     content_types = (
         '<?xml version="1.0" encoding="UTF-8"?>'
         '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
         '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
         '<Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/>'
+        '<Default Extension="png" ContentType="image/png"/>'
         '</Types>')
     rels = (
         '<?xml version="1.0" encoding="UTF-8"?>'
@@ -161,6 +162,8 @@ def export_3mf_ams(parts, path):
         'Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/>'
         '</Relationships>')
 
+    # 3dmodel.model: cada parte es un objeto-mesh; un objeto "ensamblaje" los
+    # agrupa como componentes -> Bambu lo abre como 1 objeto con varias partes.
     out = ['<?xml version="1.0" encoding="UTF-8"?>',
            '<model unit="millimeter" xml:lang="en-US" '
            'xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">',
@@ -169,8 +172,8 @@ def export_3mf_ams(parts, path):
         out.append(f'<base name="{name}" displaycolor="#{hexc.upper()}FF"/>')
     out.append('</basematerials>')
 
-    oid = 2
     ids = []
+    oid = 2
     for i, (mesh, name, hexc) in enumerate(parts):
         V, F = mesh.vertices, mesh.faces
         vtx = "".join("<vertex x=\"%.4f\" y=\"%.4f\" z=\"%.4f\"/>" % (x, y, z)
@@ -182,18 +185,40 @@ def export_3mf_ams(parts, path):
                    f'<triangles>{tri}</triangles></mesh></object>')
         ids.append(oid)
         oid += 1
-    out.append('</resources>')
-    out.append('<build>')
+    assembly_id = oid
+    out.append(f'<object id="{assembly_id}" type="model"><components>')
     for j in ids:
-        out.append(f'<item objectid="{j}"/>')   # todos en la misma posicion (registrados)
-    out.append('</build>')
+        out.append(f'<component objectid="{j}"/>')
+    out.append('</components></object>')
+    out.append('</resources>')
+    out.append(f'<build><item objectid="{assembly_id}"/></build>')
     out.append('</model>')
     model = "".join(out)
+
+    # Metadata de Bambu: asigna un filamento (extruder) a cada parte y marca el
+    # objeto como ensamblaje. Esto es lo que hace que Bambu muestre las 3 partes
+    # con su color/filamento por separado (sin fusionar).
+    identity = "1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"
+    ms = ['<?xml version="1.0" encoding="UTF-8"?>', '<config>',
+          f'<object id="{assembly_id}">',
+          '<metadata key="name" value="Bloki"/>',
+          '<metadata key="extruder" value="1"/>']
+    for k, (mesh, name, hexc) in enumerate(parts):
+        ms.append(f'<part id="{ids[k]}" subtype="normal_part">'
+                  f'<metadata key="name" value="{name}"/>'
+                  f'<metadata key="matrix" value="{identity}"/>'
+                  f'<metadata key="extruder" value="{k + 1}"/>'
+                  '<mesh_stat edges_fixed="0" degenerate_facets="0" '
+                  'facets_removed="0" facets_reversed="0" backwards_edges="0"/>'
+                  '</part>')
+    ms.append('</object></config>')
+    model_settings = "".join(ms)
 
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr("[Content_Types].xml", content_types)
         z.writestr("_rels/.rels", rels)
         z.writestr("3D/3dmodel.model", model)
+        z.writestr("Metadata/model_settings.config", model_settings)
 
 
 # ----------------------------------------------------------------------------
