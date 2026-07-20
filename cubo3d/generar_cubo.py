@@ -117,10 +117,10 @@ KR_A = 9.5 * S    # cercania a la punta de la esquina (escala con la esquina)
 # cuerpo (sin cambio de filamento -> cero purga, tiempo extra casi nulo). Al
 # imprimir de pie, la espalda es pared vertical -> el grabado sale nitido.
 BRAND_ON = True
-BRAND_LOGO = "bloki_logo_mask.png"  # mascara binaria del logo (blanco = letras)
-BRAND_H = 7.0        # altura del logo (mm) - sutil
-BRAND_DEPTH = 0.5    # profundidad del grabado (mm)
-BRAND_CY = 2.0       # centro vertical del logo en la espalda (Y, mm)
+BRAND_LOGO = "bloki_logo_mask.png"  # mascara del logo (blanco = letras)
+BRAND_H = 6.0        # altura del logo (mm) - sutil
+BRAND_DEPTH = 0.45   # profundidad del grabado (mm) - sutil
+BRAND_CY = -6.5      # centro vertical: ABAJO, centrado en la espalda (Y, mm)
 
 # Resolucion de la grilla (mm/voxel). Mas pequeno = superficie mas lisa y mas lento.
 # 0.16 -> curvas geometricamente perfectas (sin facetas) para un acabado premium.
@@ -202,28 +202,33 @@ def sphere_field(X, Y, Z, C, r):
 
 
 def logo_sdf_2d(xs, ys, logo_path, height, cx, cy, mirror_x=True):
-    """Mapea la mascara del logo (PNG binario, blanco = letras) sobre la grilla
-    (xs, ys) y devuelve un campo de distancia con signo 2D: negativo DENTRO del
-    logo. mirror_x invierte X para que se lea bien mirando la espalda (lado -Z).
-    El logo se escala a 'height' mm de alto y se centra en (cx, cy)."""
+    """Devuelve un campo de distancia con signo 2D del logo sobre la grilla
+    (xs, ys): negativo DENTRO del logo. Para curvas PREMIUM (sin escalonado del
+    voxel) el SDF se calcula a ALTA resolucion en el espacio del logo, con los
+    bordes suavizados (quita el 'dentado' del JPEG), y luego se interpola de forma
+    bilineal sobre la grilla. mirror_x invierte X para leerse bien desde atras."""
     from PIL import Image
     from scipy import ndimage
-    mask = np.asarray(Image.open(logo_path).convert("L")) > 127  # True = letra
+    img = Image.open(logo_path).convert("L")
+    up = 3                                              # sobre-muestreo para bordes finos
+    img = img.resize((img.width * up, img.height * up), Image.LANCZOS)
+    a = np.asarray(img).astype(np.float32) / 255.0
+    a = ndimage.gaussian_filter(a, sigma=up * 0.7)      # suaviza el dentado
+    mask = a > 0.5                                       # True = letra
     h_px, w_px = mask.shape
+    mm_per_px = height / h_px
+    din = ndimage.distance_transform_edt(mask).astype(np.float32)
+    dout = ndimage.distance_transform_edt(~mask).astype(np.float32)
+    sdf_px = (dout - din) * mm_per_px                    # <0 dentro, en mm, alta res
     width = height * (w_px / h_px)
     X2, Y2 = np.meshgrid(xs, ys, indexing="ij")
     lx = -(X2 - cx) if mirror_x else (X2 - cx)
     ly = Y2 - cy
-    # coordenadas de pixel (fila py de arriba hacia abajo)
-    px = ((lx / width + 0.5) * w_px).astype(int)
-    py = ((0.5 - ly / height) * h_px).astype(int)
-    inside = np.zeros(X2.shape, dtype=bool)
-    ok = (px >= 0) & (px < w_px) & (py >= 0) & (py < h_px)
-    inside[ok] = mask[py[ok], px[ok]]
-    dpx = float(xs[1] - xs[0])
-    din = ndimage.distance_transform_edt(inside) * dpx
-    dout = ndimage.distance_transform_edt(~inside) * dpx
-    return (dout - din).astype(np.float32)             # <0 dentro del logo
+    fx = (lx / width + 0.5) * w_px                       # columna (float)
+    fy = (0.5 - ly / height) * h_px                      # fila (float)
+    val = ndimage.map_coordinates(
+        sdf_px, [fy.ravel(), fx.ravel()], order=1, mode="constant", cval=height)
+    return val.reshape(X2.shape).astype(np.float32)      # <0 dentro del logo
 
 
 def export_3mf_ams(parts, path):
