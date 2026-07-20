@@ -36,9 +36,9 @@ D = 46.0     # fondo  (Z)  -> la cara mira hacia +Z (mas delgado)
 R = 13.0     # redondeo de esquinas/aristas
 
 # Panel de la cara (crema), al ras de la cara frontal (embutido en un rebaje)
-FACE_W = 38.0     # ancho del panel (mas ancho -> mas rectangular)
-FACE_H = 21.0     # alto del panel  (mas bajo  -> mas rectangular)
-FACE_R = 6.0      # redondeo de las esquinas del panel
+FACE_W = 41.8     # ancho del panel (10% mas grande, proporcional)
+FACE_H = 23.1     # alto del panel  (10% mas grande, proporcional)
+FACE_R = 6.6      # redondeo de las esquinas del panel
 FACE_CY = 4.5     # desplazamiento vertical del centro del panel (+ = arriba)
 PANEL_T = 1.8     # grosor del panel = profundidad del rebaje (queda al ras)
 FACE_BULGE = 1.5  # abombamiento del panel (0 = plano; >0 = carita con redondez)
@@ -47,14 +47,14 @@ FACE_BULGE = 1.5  # abombamiento del panel (0 = plano; >0 = carita con redondez)
 RELIEF = 1.2      # cuanto sobresalen respecto a la cara frontal
 EMBED = 1.0       # cuanto se hunden dentro del panel crema (para que peguen)
 
-EYE_DX = 11.5     # separacion horizontal de los ojos (un poco mas separados)
+EYE_DX = 13.0     # separacion horizontal de los ojos (un poco mas separados)
 EYE_DY = 1.0      # altura de los ojos respecto al centro (mas abajo, cerca de la nariz)
 EYE_R = 2.46      # radio del ojo (10% mas grande)
 
-# Nariz: bultito EN RELIEVE del MISMO color crema de la cara
-NOSE_DY = -4.5    # altura de la nariz respecto al centro del panel (mas abajo)
-NOSE_R = 1.6      # radio de la nariz (el doble)
-NOSE_RELIEF = 0.5 # cuanto sobresale la nariz (relieve suave)
+# Nariz: bolita (esferita) del MISMO color crema, que sobresale de la cara
+NOSE_DY = -4.5      # altura de la nariz respecto al centro del panel
+NOSE_R = 1.6        # radio de la bolita de la nariz
+NOSE_PROTRUDE = 1.5 # cuanto sobresale la bolita por encima de la superficie
 
 # Cavidad INTERNA para el tag NFC, cerca de la base (-Y).
 # El cubo queda SOLIDO por fuera (sin orificio): el tag se sella dentro durante
@@ -193,9 +193,12 @@ def main():
     eye_r = cylinder_field(X, Y, Z,  EYE_DX, FACE_CY + EYE_DY, EYE_R, black_back, black_front)
     black = op_union(eye_l, eye_r)
 
-    # --- Nariz: bultito crema (mismo color de la cara), muy pequeno ---
-    nose_bump = cylinder_field(X, Y, Z, 0.0, FACE_CY + NOSE_DY, NOSE_R,
-                               pocket_floor, face_top + NOSE_RELIEF)
+    # --- Nariz: bolita (esferita) crema que sobresale de la cara curva ---
+    ny = FACE_CY + NOSE_DY
+    r_nose = abs(NOSE_DY)                          # distancia al centro del panel
+    dome_z_nose = dome_zc + np.sqrt(dome_R**2 - r_nose**2)  # altura del dome ahi
+    nose_cz = dome_z_nose + NOSE_PROTRUDE - NOSE_R # centro de la esfera
+    nose_bump = sphere_field(X, Y, Z, [0.0, ny, nose_cz], NOSE_R)
 
     print("Extrayendo mallas...")
     # --- Cuerpo amarillo: cubo redondeado menos el rebaje del panel ---
