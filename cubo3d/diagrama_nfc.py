@@ -55,14 +55,20 @@ ax.text((vz0 + vz1) / 2, vy0 + 0.85, "TAG NFC (acostado)", color="white",
 # flecha de la PAUSA (viene desde arriba: se apoya el tag)
 ax.annotate("", xy=((vz0 + vz1) / 2, vy1 + 0.2), xytext=((vz0 + vz1) / 2, TOP_Y + 5),
             arrowprops=dict(arrowstyle="-|>", color="#d12", lw=2.5), zorder=6)
-ax.text((vz0 + vz1) / 2, TOP_Y + 5.6, f"PAUSA a ~{ph(PAUSE_Y):.0f} mm\n"
+ax.text((vz0 + vz1) / 2, TOP_Y + 5.6, f"PAUSA temprana a ~{ph(PAUSE_Y):.0f} mm\n"
         "(apoyar el tag plano\ny reanudar)", color="#d12", fontsize=10.5,
         fontweight="bold", ha="center", va="bottom", zorder=6)
 
-# el techo solido de la cabeza sella el tag
-ax.annotate("la cabeza solida\nde encima sella el tag",
+# el material de encima sella el tag
+ax.annotate("el cuerpo solido\nde encima sella el tag",
             xy=(vz1 - 2, vy1 + 0.2), xytext=(zmax + 2, (vy1 + TOP_Y) / 2),
             fontsize=8.5, ha="left", arrowprops=dict(arrowstyle="->", color="#555"))
+
+# lectura por debajo (telefono en la base)
+ax.annotate("se LEE acercando el\ntelefono a la BASE\n(tag a ~2 mm)", xy=((vz0+vz1)/2, PLATE_Y),
+            xytext=((vz0+vz1)/2, PLATE_Y - 3.4), fontsize=9.5, color="#0a7",
+            ha="center", va="top", fontweight="bold",
+            arrowprops=dict(arrowstyle="-|>", color="#0a7", lw=2))
 
 # la cara va al FRENTE (pared vertical -> textura lisa)
 ax.annotate("la CARA va al frente\n(pared vertical = lisa)",
@@ -80,10 +86,10 @@ ax.text(zmin - 1.4, (PLATE_Y + TOP_Y) / 2, "impresion", color="#0a7", fontsize=8
         rotation=90, va="center", ha="right")
 
 ax.set_xlim(zmin - 12, zmax + 12)
-ax.set_ylim(PLATE_Y - 4, TOP_Y + 12)
+ax.set_ylim(PLATE_Y - 9, TOP_Y + 12)
 ax.set_aspect("equal"); ax.axis("off")
-ax.set_title("Impresion DE PIE (cara al frente) + tag NFC acostado en la cabeza\n"
-             "Pausa casi al final para apoyar el tag; el techo lo sella (oculto y fijo)",
+ax.set_title("Impresion DE PIE (cara al frente) + tag NFC acostado junto a la BASE\n"
+             "Pausa temprana para apoyar el tag; el cuerpo lo sella (oculto). Se lee por debajo.",
              fontsize=11.5)
 
 plt.tight_layout()

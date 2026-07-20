@@ -68,14 +68,16 @@ arregla desde el slicer**, no desde el modelo. Aquí va todo, en orden de impact
 - **La carita (pieza aparte): también de pie / de canto**, para que su cara salga
   vertical y lisa (evita los anillos alrededor de la nariz).
 
-## 10. Pausa para el tag NFC (ahora va en la CABEZA)
-- El tag va **acostado en la parte de arriba** (la cabeza). Como se imprime de
-  pie, la cavidad queda mirando hacia arriba.
-- Añade una **PAUSA casi al final** (Bambu: clic derecho en la capa → "Add
-  Pause"), a la altura que indica el diagrama `diagrama_nfc.png`.
-- En la pausa: **apoyar el tag plano** en el hueco redondo y **Reanudar**. La
-  cabeza sólida se imprime encima y lo sella → oculto y no removible.
-- Ventaja vs antes: apoyarlo plano es fácil y confiable (no hay que encajarlo).
+## 10. Pausa para el tag NFC (va junto a la BASE, se lee por debajo)
+- El tag va **acostado ~2 mm sobre la base**. Como se imprime de pie, la cavidad
+  queda mirando hacia arriba.
+- Añade una **PAUSA temprana** (a los pocos mm, Bambu: clic derecho en la capa →
+  "Add Pause"), a la altura que indica el diagrama `diagrama_nfc.png`.
+- En la pausa: **apoyar el tag plano** en el hueco redondo y **Reanudar**. El
+  cuerpo sólido se imprime encima y lo sella → oculto y no removible.
+- **Lectura:** se acerca el teléfono a la **parte de abajo** de Bloki. Al estar a
+  ~2 mm de la base, lee al instante y en cualquier teléfono (el PLA no bloquea).
+- Apoyarlo plano es fácil y confiable (no hay que encajarlo).
 
 ---
 

@@ -39,9 +39,13 @@ S = TARGET_H / 56.0        # factor de escala proporcional
 # Cuerpo (cubo redondeado)
 W = 60.0 * S   # ancho  (X)
 H = 56.0 * S   # alto   (Y) = TARGET_H
-# Fondo (Z): al imprimir DE PIE, el tag NFC va ACOSTADO en la cabeza y necesita
-# ~26 mm libres en la profundidad -> el fondo lo define el tag (no se escala).
+# Fondo (Z): al imprimir DE PIE, el tag NFC va ACOSTADO y necesita ~26 mm libres
+# en la profundidad -> el fondo lo define el tag (no se escala).
 D = 50.0 * S   # fondo  (Z) ~34 mm  -> la cara mira hacia +Z
+# BASE PLANA: imprimir DE PIE exige una base plana (si el fondo es redondo no se
+# adhiere a la cama). Se recorta el fondo pillowy por un plano -> base estable.
+# Ademas deja el tag NFC a pocos mm de la base (lectura por debajo, confiable).
+BASE_CUT = 2.0  # mm que se recortan del fondo redondeado para dejar base plana
 R = 13.0 * S   # redondeo de esquinas/aristas (pillowy, como el referente)
 # Redondeo de las TAPAS (frente/atras). Al imprimir DE PIE (cara al frente) el
 # frente sale liso aunque sea pillowy, asi que se deja = R (sin achatar).
@@ -89,17 +93,19 @@ NOSE_DY = -6.0 * S       # altura de la nariz respecto al centro del panel
 NOSE_R = 1.6 * S         # radio de la bolita de la nariz
 NOSE_PROTRUDE = 1.5 * S  # cuanto sobresale la bolita
 
-# Cavidad INTERNA para el tag NFC, en la CABEZA (parte alta) de Bloki.
+# Cavidad INTERNA para el tag NFC, cerca de la BASE de Bloki (se lee por debajo).
 # TAMANO REAL (NO se escala): tag de 25 mm de diametro x 1.5 mm de alto.
-# IMPRESION DE PIE (cara al frente): el tag va ACOSTADO (disco horizontal, eje Y)
-# y la cavidad abre hacia ARRIBA. Cerca del final de la impresion se hace una
-# PAUSA, se apoya el tag plano y al reanudar el techo solido lo sella. Queda
-# imperceptible y no removible. Se ubica atras (Z-) para no chocar con la carita.
+# IMPRESION DE PIE: el tag va ACOSTADO (disco horizontal, eje Y) apoyado ~2 mm
+# sobre la base. La cavidad abre hacia ARRIBA: en una PAUSA temprana se apoya el
+# tag plano y al reanudar el material de encima lo sella (oculto y no removible).
+# Al quedar a solo NFC_READ mm de la base, el NFC se lee acercando el telefono a
+# la parte de abajo, de forma instantanea y confiable en cualquier telefono.
 NFC_DIAM = 26.0   # diametro de la cavidad (tag 25 mm + 1 mm holgura)
 NFC_CAV_H = 1.7   # ALTO de la cavidad en Y (tag 1.5 mm + 0.2 mm holgura)
-NFC_CY = 7.0      # centro en Y (en la cabeza, bajo el redondeo superior)
-NFC_CZ = -1.5     # centro en Z (hacia atras, libre de la carita)
-NFC_SKIN = 1.2    # techo solido minimo que sella el tag (por encima de la cavidad)
+NFC_READ = 2.0    # PLA solido entre el tag y la base (distancia de lectura)
+NFC_CZ = 0.0      # centro en Z (centrado en la profundidad, lejos de la carita)
+# centro en Y: justo encima de la base plana, dejando NFC_READ mm para leer
+NFC_CY = -H / 2 + BASE_CUT + NFC_READ + NFC_CAV_H / 2
 
 # Orificio para cordon (llavero) que atraviesa una esquina superior.
 # El radio NO se escala (debe seguir pasando un cordon); la posicion si.
@@ -368,6 +374,10 @@ def main():
         body = np.where(Z >= 0,
                         sdf_round_box_aniso(X, Y, Z, W/2, H/2, D/2, R, RZ_FRONT),
                         sdf_round_box_aniso(X, Y, Z, W/2, H/2, D/2, R, RZ_BACK))
+    # BASE PLANA: recorta el fondo redondeado por un plano horizontal -> Bloki se
+    # para y se adhiere a la cama al imprimir de pie (y deja el tag cerca de la base).
+    y_base = -H / 2 + BASE_CUT
+    body = op_intersect(body, y_base - Y)      # conservar solo Y >= y_base
     # Rebaje ESCALONADO (sistema de encaje de la carita):
     #  - parte PROFUNDA (pocket_floor..face_top): ajustada al panel (FIT_CLEAR por
     #    lado) -> las paredes centran la carita sola, sin juego lateral.
