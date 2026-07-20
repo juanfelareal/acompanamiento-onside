@@ -48,7 +48,9 @@ FACE_H = 23.1 * S
 FACE_R = 6.6 * S
 FACE_CY = 4.5 * S    # desplazamiento vertical del centro del panel (+ = arriba)
 PANEL_T = 1.8 * S    # grosor del panel = profundidad del rebaje
-FACE_BULGE = 1.5 * S # abombamiento del panel (carita con redondez)
+# Cara PLANA (FACE_BULGE=0): una superficie plana sale lisa en FDM. Un abombado
+# suave produce anillos de capas horribles, por eso se deja plana.
+FACE_BULGE = 0.0     # 0 = plana (lisa). >0 abomba pero sale con anillos de capas.
 
 # La carita es una PIEZA APARTE que encaja a presion en el rebaje del cuerpo.
 # FIT_CLEAR = holgura (por lado) entre la carita y el rebaje. NO se escala
