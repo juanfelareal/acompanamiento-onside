@@ -22,6 +22,7 @@ Uso:
   python3 generar_cubo.py
 """
 
+import zipfile
 import numpy as np
 from skimage import measure
 import trimesh
@@ -130,6 +131,63 @@ def cylinder_axis_field(X, Y, Z, A, u, r):
 
 def sphere_field(X, Y, Z, C, r):
     return np.sqrt((X - C[0])**2 + (Y - C[1])**2 + (Z - C[2])**2) - r
+
+
+def export_3mf_ams(parts, path):
+    """Escribe un .3mf multicolor listo para AMS (Bambu Studio).
+
+    parts: lista de (mesh, nombre, hex 'RRGGBB'). Las piezas quedan como
+    COMPONENTES de un mismo objeto, cada una con su color -> al abrir en Bambu
+    Studio se asigna cada color a un slot del AMS y todo imprime alineado.
+    """
+    content_types = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+        '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+        '<Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/>'
+        '</Types>')
+    rels = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        '<Relationship Target="/3D/3dmodel.model" Id="rel0" '
+        'Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/>'
+        '</Relationships>')
+
+    out = ['<?xml version="1.0" encoding="UTF-8"?>',
+           '<model unit="millimeter" xml:lang="en-US" '
+           'xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">',
+           '<resources>', '<basematerials id="1">']
+    for _, name, hexc in parts:
+        out.append(f'<base name="{name}" displaycolor="#{hexc.upper()}FF"/>')
+    out.append('</basematerials>')
+
+    ids = []
+    oid = 2
+    for i, (mesh, name, hexc) in enumerate(parts):
+        V, F = mesh.vertices, mesh.faces
+        vtx = "".join("<vertex x=\"%.4f\" y=\"%.4f\" z=\"%.4f\"/>" % (x, y, z)
+                      for x, y, z in V)
+        tri = "".join("<triangle v1=\"%d\" v2=\"%d\" v3=\"%d\"/>" % (a, b, c)
+                      for a, b, c in F)
+        out.append(f'<object id="{oid}" type="model" pid="1" pindex="{i}">'
+                   f'<mesh><vertices>{vtx}</vertices>'
+                   f'<triangles>{tri}</triangles></mesh></object>')
+        ids.append(oid)
+        oid += 1
+
+    out.append(f'<object id="{oid}" type="model"><components>')
+    for j in ids:
+        out.append(f'<component objectid="{j}"/>')
+    out.append('</components></object>')
+    out.append('</resources>')
+    out.append(f'<build><item objectid="{oid}"/></build>')
+    out.append('</model>')
+    model = "".join(out)
+
+    with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("[Content_Types].xml", content_types)
+        z.writestr("_rels/.rels", rels)
+        z.writestr("3D/3dmodel.model", model)
 
 
 # ----------------------------------------------------------------------------
@@ -250,6 +308,15 @@ def main():
     m_black.export("ojos_negro.stl")
     print("\nSTLs: cuerpo_amarillo.stl, cara_crema.stl, ojos_negro.stl")
 
+    # --- 3MF multicolor listo para AMS (Bambu Studio A1 Mini) ---
+    # Cada color es una pieza separada dentro de un mismo objeto.
+    export_3mf_ams([
+        (m_body, "Amarillo (cuerpo)", "F2CD28"),
+        (m_face, "Crema (cara)", "FAEBCD"),
+        (m_black, "Negro (ojos)", "1E1E1E"),
+    ], "Bloki_AMS_A1mini.3mf")
+    print("AMS: Bloki_AMS_A1mini.3mf (3 colores separados)")
+
     # Escena a color para previsualizar / compartir
     m_body.visual.face_colors = COL_BODY
     m_face.visual.face_colors = COL_FACE
@@ -257,11 +324,6 @@ def main():
     scene = trimesh.Scene([m_body, m_face, m_black])
     scene.export("cubo_personaje.glb")
     print("Color: cubo_personaje.glb")
-    try:
-        scene.export("cubo_personaje.3mf")
-        print("Color: cubo_personaje.3mf")
-    except Exception as e:
-        print(f"(3mf no exportado: {e})")
 
     b = (m_body + m_face + m_black).bounds
     dims = b[1] - b[0]
