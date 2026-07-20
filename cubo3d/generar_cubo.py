@@ -47,21 +47,27 @@ FACE_W = 41.8 * S
 FACE_H = 23.1 * S
 FACE_R = 6.6 * S
 FACE_CY = 4.5 * S    # desplazamiento vertical del centro del panel (+ = arriba)
-PANEL_T = 1.8 * S    # grosor del panel = profundidad del rebaje
+PANEL_T = 2.8        # grosor del panel (mm) - mas grueso: aloja el encaje de ojos
 # Cara PLANA (FACE_BULGE=0): una superficie plana sale lisa en FDM. Un abombado
 # suave produce anillos de capas horribles, por eso se deja plana.
 FACE_BULGE = 0.0     # 0 = plana (lisa). >0 abomba pero sale con anillos de capas.
 # La cara queda un poco HUNDIDA respecto al cuerpo (sutil), no al ras ni saliente.
-FACE_RECESS = 0.6      # mm que se hunde la cara bajo la superficie del cuerpo
+FACE_RECESS = 0.6    # mm que se hunde la cara bajo la superficie del cuerpo
+# Borde limpio: por encima de la cara el rebaje es un poco mas ancho (un reveal
+# uniforme) -> la cara centrada deja un marco parejo, sin "trocito" desigual.
+FACE_OFFSET = 0.5    # mm de reveal (marco visible) alrededor de la cara hundida
 
-# La carita es una PIEZA APARTE que encaja a presion en el rebaje del cuerpo.
-# FIT_CLEAR = holgura (por lado) entre la carita y el rebaje. NO se escala
-# (es tolerancia de impresion). Subelo si queda muy apretada, bajalo si floja.
-FIT_CLEAR = 0.06   # mas apretado que antes (0.12 quedaba flojo, tocaba pegar)
-# Los OJOS son piezas aparte (negras) tipo "hongo": vastago fino que entra en un
-# hueco de la carita + cabeza SEMIESFERICA (como la nariz) que queda visible y
-# los retiene (no se salen). El cuerpo los respalda por detras.
-EYE_CLEAR = 0.20   # holgura del vastago del ojo (generosa, para que entre sin lijar)
+# La carita encaja a presion en el rebaje del cuerpo (centrada por el ajuste).
+FIT_CLEAR = 0.06   # holgura por lado carita<->rebaje (apretado, sujeta sin pegar)
+
+# OJOS: encajan DESDE ATRAS de la carita, con TOPE y CLIC. Cada ojo es tipo
+# remache: cabeza semiesferica visible al frente + vastago + PESTANA trasera
+# (mas ancha que el hueco) que hace de tope. El hueco de la carita es escalonado
+# (frente estrecho para el vastago + avellanado trasero para la pestana). La
+# pestana entra a presion en el avellanado (clic) y el cuerpo la respalda.
+EYE_CLEAR = 0.12       # holgura del vastago en el hueco del frente
+EYE_FLANGE = 1.0       # cuanto mas ancha es la pestana (radio) que el vastago
+EYE_FLANGE_CLEAR = 0.10  # holgura de la pestana en el avellanado (para el clic)
 
 # Ojos y nariz EN RELIEVE
 RELIEF = 1.2 * S     # cuanto sobresalen los ojos
@@ -281,26 +287,39 @@ def main():
     hy = FACE_H / 2 - FACE_R
     rr = sdf_round_rect_2d(X, Y - FACE_CY, hx, hy, FACE_R)  # footprint del panel
 
-    # --- Ojos: piezas negras tipo "hongo" (vastago fino + cabeza semiesferica) ---
-    # La cabeza es una semiesfera (como la nariz) que queda visible y, al ser mas
-    # ancha que el hueco, retiene el ojo; el vastago entra en el hueco y el cuerpo
-    # lo respalda por detras. Asi no queda plano ni se sale.
-    eye_shaft_r = EYE_R * 0.6               # radio del vastago (mas fino que la cabeza)
+    # --- Ojos tipo REMACHE: encajan DESDE ATRAS con TOPE y CLIC ---
+    # Cada ojo (negro) tiene 3 partes en un solo eje Z:
+    #   1) CABEZA semiesferica al frente (visible, sobresale como la nariz)
+    #   2) CUELLO fino (radio EYE_R) que atraviesa el hueco de la carita
+    #   3) PESTANA trasera mas ancha que el hueco -> hace de TOPE
+    # El hueco de la carita es ESCALONADO: estrecho al frente (para el cuello) y
+    # avellanado ancho atras (para la pestana). Se mete el ojo por DETRAS: la
+    # cabeza+cuello asoman al frente y la pestana entra a presion en el avellanado
+    # (CLIC). La pestana no pasa el escalon (TOPE) y, al montar la carita en el
+    # cuerpo, el piso del rebaje respalda la pestana -> el ojo NO se puede sacar.
+    FLANGE_T = PANEL_T * 0.45                  # grosor de la pestana trasera
+    eye_step_z = pocket_floor + FLANGE_T       # escalon (techo del avellanado)
     eye_pos = [(-EYE_DX, FACE_CY + EYE_DY), (EYE_DX, FACE_CY + EYE_DY)]
 
     black = None
     eye_holes = None
     for (ex, ey) in eye_pos:
-        shaft = cylinder_field(X, Y, Z, ex, ey, eye_shaft_r, pocket_floor, face_top)
-        # cabeza: semiesfera (mitad superior de una esfera) apoyada en face_top
+        # 1) pieza del ojo (negra): pestana + cuello + cabeza
+        flange = cylinder_field(X, Y, Z, ex, ey, EYE_R + EYE_FLANGE,
+                                pocket_floor, eye_step_z)
+        neck = cylinder_field(X, Y, Z, ex, ey, EYE_R, eye_step_z, face_top)
         head = op_intersect(sphere_field(X, Y, Z, [ex, ey, face_top], EYE_R),
-                            (face_top - Z))     # z >= face_top -> mitad de arriba
-        eye = op_union(shaft, head)
+                            (face_top - Z))    # semiesfera z >= face_top
+        eye = op_union(op_union(flange, neck), head)
         black = eye if black is None else op_union(black, eye)
-        # hueco en la carita para el vastago (mas grande -> entra sin lijar)
-        h = cylinder_field(X, Y, Z, ex, ey, eye_shaft_r + EYE_CLEAR,
-                           pocket_floor - 1.0, face_top + 1.0)
-        eye_holes = h if eye_holes is None else op_union(eye_holes, h)
+        # 2) hueco escalonado en la carita: cuello estrecho + avellanado ancho
+        hole_neck = cylinder_field(X, Y, Z, ex, ey, EYE_R + EYE_CLEAR,
+                                   eye_step_z, face_top + 1.0)
+        hole_bore = cylinder_field(X, Y, Z, ex, ey,
+                                   EYE_R + EYE_FLANGE + EYE_FLANGE_CLEAR,
+                                   pocket_floor - 1.0, eye_step_z)
+        hole = op_union(hole_neck, hole_bore)
+        eye_holes = hole if eye_holes is None else op_union(eye_holes, hole)
 
     # --- Nariz: bolita (semiesfera) crema que sobresale de la cara plana ---
     ny = FACE_CY + NOSE_DY
@@ -312,7 +331,15 @@ def main():
     # El rebaje es un poco MAS GRANDE que la carita (FIT_CLEAR por lado) para
     # que la carita entre a presion. rr - FIT_CLEAR agranda el footprint.
     body = sdf_round_box(np.stack([X, Y, Z], axis=-1), (W/2 - R, H/2 - R, D/2 - R), R)
-    pocket = op_intersect(rr - FIT_CLEAR, (pocket_floor - Z))
+    # Rebaje ESCALONADO (sistema de encaje de la carita):
+    #  - parte PROFUNDA (pocket_floor..face_top): ajustada al panel (FIT_CLEAR por
+    #    lado) -> las paredes centran la carita sola, sin juego lateral.
+    #  - BOCA en el rebaje (face_top..frente): un poco mas ancha (FACE_OFFSET) ->
+    #    deja un marco/reveal uniforme alrededor de la cara hundida, para que el
+    #    borde se vea parejo y no quede un "trocito" desigual.
+    pocket_deep = op_intersect(rr - FIT_CLEAR, z_slab(Z, pocket_floor, face_top))
+    pocket_mouth = op_intersect(rr - (FIT_CLEAR + FACE_OFFSET), (face_top - Z))
+    pocket = op_union(pocket_deep, pocket_mouth)
     body = op_subtract(body, pocket)
 
     # Cavidad INTERNA para el tag NFC, DETRAS del panel de la cara (lado +Z).
