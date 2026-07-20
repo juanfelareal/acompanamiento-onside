@@ -39,8 +39,15 @@ S = TARGET_H / 56.0        # factor de escala proporcional
 # Cuerpo (cubo redondeado)
 W = 60.0 * S   # ancho  (X)
 H = 56.0 * S   # alto   (Y) = TARGET_H
-D = 46.0 * S   # fondo  (Z)  -> la cara mira hacia +Z
-R = 13.0 * S   # redondeo de esquinas/aristas
+# Fondo (Z): al imprimir DE PIE, el tag NFC va ACOSTADO en la cabeza y necesita
+# ~26 mm libres en la profundidad -> el fondo lo define el tag (no se escala).
+D = 50.0 * S   # fondo  (Z) ~34 mm  -> la cara mira hacia +Z
+R = 13.0 * S   # redondeo de esquinas/aristas (pillowy, como el referente)
+# Redondeo de las TAPAS (frente/atras). Al imprimir DE PIE (cara al frente) el
+# frente sale liso aunque sea pillowy, asi que se deja = R (sin achatar).
+# Se puede achatar la coronilla (RZ del +Y) si el escalonado de arriba molesta.
+RZ_FRONT = 13.0 * S
+RZ_BACK = 13.0 * S
 
 # Panel de la cara (crema), embutido en la cara frontal
 FACE_W = 41.8 * S
@@ -82,17 +89,22 @@ NOSE_DY = -6.0 * S       # altura de la nariz respecto al centro del panel
 NOSE_R = 1.6 * S         # radio de la bolita de la nariz
 NOSE_PROTRUDE = 1.5 * S  # cuanto sobresale la bolita
 
-# Cavidad INTERNA para el tag NFC, DETRAS de la carita (lado +Z).
+# Cavidad INTERNA para el tag NFC, en la CABEZA (parte alta) de Bloki.
 # TAMANO REAL (NO se escala): tag de 25 mm de diametro x 1.5 mm de alto.
-# Al imprimir con la cara hacia arriba, se abre hacia arriba; en la pausa se
-# coloca el tag y la cara lo sella. Queda imperceptible y no removible.
+# IMPRESION DE PIE (cara al frente): el tag va ACOSTADO (disco horizontal, eje Y)
+# y la cavidad abre hacia ARRIBA. Cerca del final de la impresion se hace una
+# PAUSA, se apoya el tag plano y al reanudar el techo solido lo sella. Queda
+# imperceptible y no removible. Se ubica atras (Z-) para no chocar con la carita.
 NFC_DIAM = 26.0   # diametro de la cavidad (tag 25 mm + 1 mm holgura)
-NFC_SKIN = 1.2    # pared solida que sella el tag (entre cavidad y fondo del panel)
-NFC_CAV_H = 1.7   # alto de la cavidad (tag 1.5 mm + 0.2 mm holgura)
+NFC_CAV_H = 1.7   # ALTO de la cavidad en Y (tag 1.5 mm + 0.2 mm holgura)
+NFC_CY = 7.0      # centro en Y (en la cabeza, bajo el redondeo superior)
+NFC_CZ = -1.5     # centro en Z (hacia atras, libre de la carita)
+NFC_SKIN = 1.2    # techo solido minimo que sella el tag (por encima de la cavidad)
 
 # Orificio para cordon (llavero) que atraviesa una esquina superior.
 # El radio NO se escala (debe seguir pasando un cordon); la posicion si.
-KR_R = 1.5        # radio del orificio (~3 mm) -> pasa una cuerdita fina
+# Mas SUTIL (radio menor): sigue pasando un cordon fino pero se nota menos.
+KR_R = 1.1        # radio del orificio (~2.2 mm) -> mas discreto
 KR_A = 9.5 * S    # cercania a la punta de la esquina (escala con la esquina)
 
 # Resolucion de la grilla (mm/voxel). Mas pequeno = superficie mas lisa y mas lento.
@@ -112,6 +124,20 @@ def sdf_round_box(P, half, r):
     outside = np.linalg.norm(np.maximum(q, 0.0), axis=-1)
     inside = np.minimum(np.max(q, axis=-1), 0.0)
     return outside + inside - r
+
+
+def sdf_round_box_aniso(X, Y, Z, hx, hy, hz, rv, rz):
+    """Caja con esquinas VERTICALES de radio rv y redondeo de las TAPAS (Z) rz.
+    La silueta frontal (XY) es un rect redondeado de radio rv y NO depende de rz;
+    rz solo controla que tan 'pillowy' es la transicion de la cara frontal/trasera
+    hacia las paredes. rz menor -> tapa mas plana -> menos escalonado al imprimir.
+    Con rz = rv se reduce a una caja redondeada isotropica de radio rv.
+    """
+    d2 = sdf_round_rect_2d(X, Y, hx - rz, hy - rz, rv - rz)
+    dz = np.abs(Z) - (hz - rz)
+    outside = np.hypot(np.maximum(d2, 0.0), np.maximum(dz, 0.0))
+    inside = np.minimum(np.maximum(d2, dz), 0.0)
+    return outside + inside - rz
 
 
 def sdf_round_rect_2d(px, py, hx, hy, r):
@@ -266,13 +292,14 @@ def mesh_from_field(field, origin, spacing, name, min_vol_mm3=1.0):
 
 
 def build_grid():
+    # float32 -> mitad de memoria (a 0.16 mm la precision sobra) para no agotar RAM
     pad = R + 5.0
-    xs = np.arange(-W / 2 - pad, W / 2 + pad + VOXEL, VOXEL)
-    ys = np.arange(-H / 2 - pad, H / 2 + pad + VOXEL, VOXEL)
+    xs = np.arange(-W / 2 - pad, W / 2 + pad + VOXEL, VOXEL, dtype=np.float32)
+    ys = np.arange(-H / 2 - pad, H / 2 + pad + VOXEL, VOXEL, dtype=np.float32)
     # dejar espacio al frente para el relieve de ojos/nariz
-    zs = np.arange(-D / 2 - pad, D / 2 + RELIEF + pad + VOXEL, VOXEL)
+    zs = np.arange(-D / 2 - pad, D / 2 + RELIEF + pad + VOXEL, VOXEL, dtype=np.float32)
     X, Y, Z = np.meshgrid(xs, ys, zs, indexing="ij")
-    origin = (xs[0], ys[0], zs[0])
+    origin = (float(xs[0]), float(ys[0]), float(zs[0]))
     spacing = (VOXEL, VOXEL, VOXEL)
     return X, Y, Z, origin, spacing
 
@@ -331,7 +358,16 @@ def main():
     # --- Cuerpo amarillo (1 color): cubo redondeado menos el rebaje ---
     # El rebaje es un poco MAS GRANDE que la carita (FIT_CLEAR por lado) para
     # que la carita entre a presion. rr - FIT_CLEAR agranda el footprint.
-    body = sdf_round_box(np.stack([X, Y, Z], axis=-1), (W/2 - R, H/2 - R, D/2 - R), R)
+    # Cuerpo redondeado pillowy. (RZ_FRONT/RZ_BACK permiten achatar tapas si se
+    # quisiera; con ambos = R esto equivale a la caja redondeada isotropica, que
+    # ademas usa mucha menos memoria a alta resolucion.)
+    if RZ_FRONT == R and RZ_BACK == R:
+        body = sdf_round_box(np.stack([X, Y, Z], axis=-1),
+                             (W/2 - R, H/2 - R, D/2 - R), R)
+    else:
+        body = np.where(Z >= 0,
+                        sdf_round_box_aniso(X, Y, Z, W/2, H/2, D/2, R, RZ_FRONT),
+                        sdf_round_box_aniso(X, Y, Z, W/2, H/2, D/2, R, RZ_BACK))
     # Rebaje ESCALONADO (sistema de encaje de la carita):
     #  - parte PROFUNDA (pocket_floor..face_top): ajustada al panel (FIT_CLEAR por
     #    lado) -> las paredes centran la carita sola, sin juego lateral.
@@ -343,16 +379,17 @@ def main():
     pocket = op_union(pocket_deep, pocket_mouth)
     body = op_subtract(body, pocket)
 
-    # Cavidad INTERNA para el tag NFC, DETRAS del panel de la cara (lado +Z).
-    # Disco de eje Z, centrado tras la carita. Es un hueco cerrado (el cubo se
-    # ve solido por fuera). Al imprimir con la cara hacia arriba, se abre hacia
-    # arriba y el tag se coloca en la pausa; luego la cara lo sella.
-    nfc_radial = np.hypot(X - 0.0, Y - FACE_CY) - NFC_DIAM / 2.0
-    nfc_z1 = pocket_floor - NFC_SKIN     # techo de la cavidad (hacia la cara)
-    nfc_z0 = nfc_z1 - NFC_CAV_H          # fondo de la cavidad (hacia atras)
-    nfc_zc = 0.5 * (nfc_z0 + nfc_z1)
-    nfc_zslab = np.abs(Z - nfc_zc) - 0.5 * NFC_CAV_H
-    nfc = op_intersect(nfc_radial, nfc_zslab)
+    # Cavidad INTERNA para el tag NFC, en la CABEZA. Disco de eje Y (tag acostado)
+    # centrado en (X=0, Z=NFC_CZ) hacia atras para no chocar con la carita. Es un
+    # hueco cerrado (el cubo se ve solido por fuera). Al imprimir DE PIE, abre
+    # hacia arriba: en la pausa (cerca del final) se apoya el tag plano y el techo
+    # solido de la cabeza lo sella. NFC_CY se mantiene bajo el redondeo superior
+    # para que la seccion horizontal sea plena y quepa el disco de 26 mm.
+    nfc_radial = np.hypot(X - 0.0, Z - NFC_CZ) - NFC_DIAM / 2.0
+    nfc_y0 = NFC_CY - 0.5 * NFC_CAV_H    # piso de la cavidad (donde se apoya el tag)
+    nfc_y1 = NFC_CY + 0.5 * NFC_CAV_H    # techo de la cavidad (abre hacia arriba)
+    nfc_yslab = np.abs(Y - NFC_CY) - 0.5 * NFC_CAV_H
+    nfc = op_intersect(nfc_radial, nfc_yslab)
     body = op_subtract(body, nfc)
 
     # Orificio para cuerdita: atraviesa la esquina superior IZQUIERDA-TRASERA

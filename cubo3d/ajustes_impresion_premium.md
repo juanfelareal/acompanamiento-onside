@@ -60,16 +60,22 @@ arregla desde el slicer**, no desde el modelo. Aquí va todo, en orden de impact
   aspecto mate rugoso de la foto puede ser esto). Secar 4–6 h a ~45–50 °C si
   tienes secador, o usarlo recién abierto.
 
-## 9. Orientación (OBLIGATORIA por el NFC)
-- **Cara hacia ARRIBA**, apoyado sobre la **parte trasera plana** (la espalda).
-- Esto es necesario para poder meter el tag en la pausa. No lo cambies.
-- Sin soportes.
+## 9. Orientación — DE PIE, cara al frente (clave para la textura)
+- Imprimir **Bloki de pie, con la cara mirando al frente** (parado sobre su base).
+- Así la cara y todo el frente se imprimen como **pared vertical → salen lisos**
+  (el escalonado se va a la coronilla y la base, que casi no se ven).
+- Sin soportes. El orificio del llavero (pequeño) puentea solo.
+- **La carita (pieza aparte): también de pie / de canto**, para que su cara salga
+  vertical y lisa (evita los anillos alrededor de la nariz).
 
-## 10. Recordatorio: pausa para el tag NFC
-- La cavidad del tag va **detrás de la cara**. Añade una **PAUSA** a la altura
-  de la cavidad (Bambu: clic derecho en la capa → "Add Pause"), coloca el tag y
-  reanuda. El techo lo sella → queda oculto y no removible.
-- (La altura exacta de la pausa la da el diagrama `diagrama_nfc.png`.)
+## 10. Pausa para el tag NFC (ahora va en la CABEZA)
+- El tag va **acostado en la parte de arriba** (la cabeza). Como se imprime de
+  pie, la cavidad queda mirando hacia arriba.
+- Añade una **PAUSA casi al final** (Bambu: clic derecho en la capa → "Add
+  Pause"), a la altura que indica el diagrama `diagrama_nfc.png`.
+- En la pausa: **apoyar el tag plano** en el hueco redondo y **Reanudar**. La
+  cabeza sólida se imprime encima y lo sella → oculto y no removible.
+- Ventaja vs antes: apoyarlo plano es fácil y confiable (no hay que encajarlo).
 
 ---
 
