@@ -54,6 +54,9 @@ FACE_BULGE = 1.5 * S # abombamiento del panel (carita con redondez)
 # FIT_CLEAR = holgura (por lado) entre la carita y el rebaje. NO se escala
 # (es tolerancia de impresion). Subelo si queda muy apretada, bajalo si floja.
 FIT_CLEAR = 0.12
+# Los OJOS tambien son piezas aparte (negras) que encajan a presion en la
+# carita. EYE_CLEAR = holgura (por lado) del ojo en su hueco.
+EYE_CLEAR = 0.08
 
 # Ojos y nariz EN RELIEVE
 RELIEF = 1.2 * S     # cuanto sobresalen los ojos
@@ -279,13 +282,22 @@ def main():
     dome_zc = front_z + FACE_BULGE - dome_R
     face_top = front_z + FACE_BULGE   # punto mas alto de la cara
 
-    black_back = front_z - EMBED         # los ojos se hunden hasta aca
-    black_front = face_top + RELIEF      # y sobresalen por encima del dome
+    # Los ojos son PIEZAS APARTE (negras). Cada ojo es un cilindro que va desde
+    # el fondo de la carita (pocket_floor, lo tapa el cuerpo al ensamblar) hasta
+    # sobresalir por el frente. Encaja a presion en un hueco de la carita.
+    black_back = pocket_floor            # el ojo llega al fondo (lo respalda el cuerpo)
+    black_front = face_top + RELIEF      # y sobresale por encima del dome
 
-    # --- Solido negro: SOLO los ojos, en relieve ---
     eye_l = cylinder_field(X, Y, Z, -EYE_DX, FACE_CY + EYE_DY, EYE_R, black_back, black_front)
     eye_r = cylinder_field(X, Y, Z,  EYE_DX, FACE_CY + EYE_DY, EYE_R, black_back, black_front)
     black = op_union(eye_l, eye_r)
+
+    # Huecos para los ojos en la carita (un poco mas grandes -> encaje a presion)
+    hole_l = cylinder_field(X, Y, Z, -EYE_DX, FACE_CY + EYE_DY, EYE_R + EYE_CLEAR,
+                            pocket_floor - 1.0, black_front + 1.0)
+    hole_r = cylinder_field(X, Y, Z,  EYE_DX, FACE_CY + EYE_DY, EYE_R + EYE_CLEAR,
+                            pocket_floor - 1.0, black_front + 1.0)
+    eye_holes = op_union(hole_l, hole_r)
 
     # --- Nariz: bolita (esferita) crema que sobresale de la cara curva ---
     ny = FACE_CY + NOSE_DY
@@ -328,37 +340,31 @@ def main():
     m_body = mesh_from_field(body, origin, spacing, "cuerpo")
     del body, pocket, nfc, kr
 
-    # --- Panel crema: rellena el rebaje y se abomba arriba (dome), + nariz, - ojos ---
+    # --- Carita crema (1 color): rebaje + dome + nariz, con HUECOS para los ojos ---
     panel = op_intersect(rr, (pocket_floor - Z))    # footprint + por encima del piso
     dome = sphere_field(X, Y, Z, [0.0, FACE_CY, dome_zc], dome_R)
     panel = op_intersect(panel, dome)               # tapa abombada (redondez)
     panel = op_union(panel, nose_bump)              # anade la naricita crema
-    panel = op_subtract(panel, black)               # deja el hueco para los ojos
+    panel = op_subtract(panel, eye_holes)           # huecos donde encajan los ojos
     m_face = mesh_from_field(panel, origin, spacing, "cara")
-    del panel, nose_bump, dome
+    del panel, nose_bump, dome, eye_holes
 
-    # --- Negro: los ojos en relieve ---
+    # --- Ojos (negro, 1 color): 2 piezas que encajan a presion en la carita ---
     m_black = mesh_from_field(black, origin, spacing, "ojos")
     del black
 
-    # Exportar STLs (registradas)
+    # ---- DISENO EN 3 PIEZAS, CADA UNA DE 1 SOLO COLOR ----
+    # Ningun print cambia de color -> CERO purga, maxima eficiencia. Se imprime
+    # cada STL con su filamento y se ensambla a presion (sin pegamento):
+    #   1) cuerpo_amarillo.stl  (amarillo)  - lleva el NFC sellado (pausa)
+    #   2) cara_crema.stl       (crema)     - encaja en el rebaje del cuerpo
+    #   3) ojos_negro.stl       (negro, x2) - encajan en los huecos de la carita
     m_body.export("cuerpo_amarillo.stl")
     m_face.export("cara_crema.stl")
     m_black.export("ojos_negro.stl")
-    print("\nSTLs: cuerpo_amarillo.stl, cara_crema.stl, ojos_negro.stl")
+    print("\nSTLs (cada uno 1 color): cuerpo_amarillo, cara_crema, ojos_negro")
 
-    # ---- DISENO EN 2 PIEZAS (impresion eficiente) ----
-    # 1) CUERPO: 1 solo color (amarillo) -> 0 cambios de color, sin torre de
-    #    purga. Lleva el NFC sellado dentro. Se imprime desde su STL.
-    # 2) CARITA: pieza aparte (crema + ojos negros) que encaja a presion en el
-    #    rebaje del cuerpo. Solo esta pieza (pequena) usa el AMS.
-    export_3mf_ams([
-        (m_face, "Crema (cara)", "FAEBCD"),
-        (m_black, "Negro (ojos)", "1E1E1E"),
-    ], "Bloki_carita_AMS.3mf")
-    print("AMS: Bloki_carita_AMS.3mf (carita: crema + ojos)")
-
-    # Escena a color para previsualizar / compartir (cuerpo + carita encajada)
+    # Escena a color para previsualizar / compartir (todo ensamblado)
     m_body.visual.face_colors = COL_BODY
     m_face.visual.face_colors = COL_FACE
     m_black.visual.face_colors = COL_BLACK

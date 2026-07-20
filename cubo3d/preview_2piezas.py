@@ -50,13 +50,13 @@ asm = [load("cuerpo_amarillo.stl", YELLOW, outer_only=True),
 ax1 = fig.add_subplot(1, 2, 1, projection="3d")
 draw(ax1, asm, 50, -74, [0.35, 0.5, 0.8], "Ensamblada (carita encajada)")
 
-# Explotada: carita + ojos desplazados hacia +Z (afuera)
-dz = 14
+# Explotada: carita y ojos desplazados hacia +Z (afuera). Los ojos mas lejos.
 exp = [load("cuerpo_amarillo.stl", YELLOW, outer_only=True),
-       load("cara_crema.stl", CREAM, shift=(0, 0, dz)),
-       load("ojos_negro.stl", BLACK, shift=(0, 0, dz))]
+       load("cara_crema.stl", CREAM, shift=(0, 0, 12)),
+       load("ojos_negro.stl", BLACK, shift=(0, 0, 24))]
 ax2 = fig.add_subplot(1, 2, 2, projection="3d")
-draw(ax2, exp, 50, -74, [0.35, 0.5, 0.8], "Separada: cuerpo (1 color) + carita aparte")
+draw(ax2, exp, 50, -74, [0.35, 0.5, 0.8],
+     "Separada: cuerpo + carita + ojos (cada uno 1 color)")
 
 plt.tight_layout()
 plt.savefig("preview_2piezas.png", dpi=120, bbox_inches="tight", facecolor="white")
