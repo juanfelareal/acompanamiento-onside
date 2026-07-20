@@ -50,6 +50,11 @@ FACE_CY = 4.5 * S    # desplazamiento vertical del centro del panel (+ = arriba)
 PANEL_T = 1.8 * S    # grosor del panel = profundidad del rebaje
 FACE_BULGE = 1.5 * S # abombamiento del panel (carita con redondez)
 
+# La carita es una PIEZA APARTE que encaja a presion en el rebaje del cuerpo.
+# FIT_CLEAR = holgura (por lado) entre la carita y el rebaje. NO se escala
+# (es tolerancia de impresion). Subelo si queda muy apretada, bajalo si floja.
+FIT_CLEAR = 0.12
+
 # Ojos y nariz EN RELIEVE
 RELIEF = 1.2 * S     # cuanto sobresalen los ojos
 EMBED = 1.0 * S      # cuanto se hunden dentro del panel
@@ -290,9 +295,11 @@ def main():
     nose_bump = sphere_field(X, Y, Z, [0.0, ny, nose_cz], NOSE_R)
 
     print("Extrayendo mallas...")
-    # --- Cuerpo amarillo: cubo redondeado menos el rebaje del panel ---
+    # --- Cuerpo amarillo (1 color): cubo redondeado menos el rebaje ---
+    # El rebaje es un poco MAS GRANDE que la carita (FIT_CLEAR por lado) para
+    # que la carita entre a presion. rr - FIT_CLEAR agranda el footprint.
     body = sdf_round_box(np.stack([X, Y, Z], axis=-1), (W/2 - R, H/2 - R, D/2 - R), R)
-    pocket = op_intersect(rr, (pocket_floor - Z))   # footprint del panel, z>pocket_floor
+    pocket = op_intersect(rr - FIT_CLEAR, (pocket_floor - Z))
     body = op_subtract(body, pocket)
 
     # Cavidad INTERNA para el tag NFC, DETRAS del panel de la cara (lado +Z).
@@ -334,30 +341,28 @@ def main():
     m_black = mesh_from_field(black, origin, spacing, "ojos")
     del black
 
-    # Exportar STLs (una pieza por color, registradas)
+    # Exportar STLs (registradas)
     m_body.export("cuerpo_amarillo.stl")
     m_face.export("cara_crema.stl")
     m_black.export("ojos_negro.stl")
     print("\nSTLs: cuerpo_amarillo.stl, cara_crema.stl, ojos_negro.stl")
 
-    # --- 3MF multicolor listo para AMS (Bambu Studio A1 Mini) ---
-    # Orientacion NATIVA: la carita queda hacia arriba (+Z). Asi los cambios de
-    # color solo ocurren en los ultimos mm (la cara) -> minimo desperdicio. La
-    # cavidad del NFC esta detras de la cara y se embebe en la pausa (cerca del
-    # final). Cada color es una pieza separada del mismo objeto (para el AMS).
+    # ---- DISENO EN 2 PIEZAS (impresion eficiente) ----
+    # 1) CUERPO: 1 solo color (amarillo) -> 0 cambios de color, sin torre de
+    #    purga. Lleva el NFC sellado dentro. Se imprime desde su STL.
+    # 2) CARITA: pieza aparte (crema + ojos negros) que encaja a presion en el
+    #    rebaje del cuerpo. Solo esta pieza (pequena) usa el AMS.
     export_3mf_ams([
-        (m_body, "Amarillo (cuerpo)", "F2CD28"),
         (m_face, "Crema (cara)", "FAEBCD"),
         (m_black, "Negro (ojos)", "1E1E1E"),
-    ], "Bloki_AMS_A1mini.3mf")
-    print("AMS: Bloki_AMS_A1mini.3mf (carita arriba, 3 colores)")
+    ], "Bloki_carita_AMS.3mf")
+    print("AMS: Bloki_carita_AMS.3mf (carita: crema + ojos)")
 
-    # Escena a color para previsualizar / compartir
+    # Escena a color para previsualizar / compartir (cuerpo + carita encajada)
     m_body.visual.face_colors = COL_BODY
     m_face.visual.face_colors = COL_FACE
     m_black.visual.face_colors = COL_BLACK
-    scene = trimesh.Scene([m_body, m_face, m_black])
-    scene.export("cubo_personaje.glb")
+    trimesh.Scene([m_body, m_face, m_black]).export("cubo_personaje.glb")
     print("Color: cubo_personaje.glb")
 
     b = (m_body + m_face + m_black).bounds
