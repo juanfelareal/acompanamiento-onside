@@ -1,8 +1,12 @@
 # Bloki — Instrucciones completas de impresión
 
 Cubito 3D con carita + **tag NFC oculto** (sellado dentro, no se ve ni se saca) +
-orificio para llavero. Se imprime **de pie (mirando al frente)** en 3 piezas de
-1 color cada una, que encajan a presión (sin pegamento).
+orificio para llavero + **logo BLOKI grabado en la espalda**. Se imprime **de pie
+(mirando al frente)** en 3 piezas de 1 color cada una, que encajan a presión.
+
+> **El logo va grabado en el mismo color** (viene en el `cuerpo_amarillo.stl`).
+> No hay que hacer nada extra: **no es un cambio de color**, así que no agrega
+> tiempo ni purga. Sale al imprimir el cuerpo.
 
 **Impresora de referencia:** Bambu Lab A1 Mini (sirve cualquier FDM).
 

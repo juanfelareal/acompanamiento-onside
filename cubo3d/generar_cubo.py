@@ -113,6 +113,15 @@ NFC_CY = -H / 2 + BASE_CUT + NFC_READ + NFC_CAV_H / 2
 KR_R = 1.1        # radio del orificio (~2.2 mm) -> mas discreto
 KR_A = 9.5 * S    # cercania a la punta de la esquina (escala con la esquina)
 
+# Logo BLOKI (real, del cliente) GRABADO en la espalda, en el MISMO color del
+# cuerpo (sin cambio de filamento -> cero purga, tiempo extra casi nulo). Al
+# imprimir de pie, la espalda es pared vertical -> el grabado sale nitido.
+BRAND_ON = True
+BRAND_LOGO = "bloki_logo_mask.png"  # mascara binaria del logo (blanco = letras)
+BRAND_H = 7.0        # altura del logo (mm) - sutil
+BRAND_DEPTH = 0.5    # profundidad del grabado (mm)
+BRAND_CY = 2.0       # centro vertical del logo en la espalda (Y, mm)
+
 # Resolucion de la grilla (mm/voxel). Mas pequeno = superficie mas lisa y mas lento.
 # 0.16 -> curvas geometricamente perfectas (sin facetas) para un acabado premium.
 VOXEL = 0.16
@@ -190,6 +199,31 @@ def cylinder_axis_field(X, Y, Z, A, u, r):
 
 def sphere_field(X, Y, Z, C, r):
     return np.sqrt((X - C[0])**2 + (Y - C[1])**2 + (Z - C[2])**2) - r
+
+
+def logo_sdf_2d(xs, ys, logo_path, height, cx, cy, mirror_x=True):
+    """Mapea la mascara del logo (PNG binario, blanco = letras) sobre la grilla
+    (xs, ys) y devuelve un campo de distancia con signo 2D: negativo DENTRO del
+    logo. mirror_x invierte X para que se lea bien mirando la espalda (lado -Z).
+    El logo se escala a 'height' mm de alto y se centra en (cx, cy)."""
+    from PIL import Image
+    from scipy import ndimage
+    mask = np.asarray(Image.open(logo_path).convert("L")) > 127  # True = letra
+    h_px, w_px = mask.shape
+    width = height * (w_px / h_px)
+    X2, Y2 = np.meshgrid(xs, ys, indexing="ij")
+    lx = -(X2 - cx) if mirror_x else (X2 - cx)
+    ly = Y2 - cy
+    # coordenadas de pixel (fila py de arriba hacia abajo)
+    px = ((lx / width + 0.5) * w_px).astype(int)
+    py = ((0.5 - ly / height) * h_px).astype(int)
+    inside = np.zeros(X2.shape, dtype=bool)
+    ok = (px >= 0) & (px < w_px) & (py >= 0) & (py < h_px)
+    inside[ok] = mask[py[ok], px[ok]]
+    dpx = float(xs[1] - xs[0])
+    din = ndimage.distance_transform_edt(inside) * dpx
+    dout = ndimage.distance_transform_edt(~inside) * dpx
+    return (dout - din).astype(np.float32)             # <0 dentro del logo
 
 
 def export_3mf_ams(parts, path):
@@ -412,6 +446,19 @@ def main():
     kr = cylinder_axis_field(X, Y, Z, A, u, KR_R)
     kr = op_intersect(kr, sphere_field(X, Y, Z, Cc, R + 3))  # confinar a la esquina
     body = op_subtract(body, kr)
+
+    # Marca "bloki" GRABADA en la espalda (lado -Z), mismo color (sin cambio de
+    # filamento). Se hunde BRAND_DEPTH en la cara trasera plana. Se lee bien desde
+    # atras (texto espejado en X). Cae en el panel plano central de la espalda.
+    if BRAND_ON:
+        xs = X[:, 0, 0]
+        ys = Y[0, :, 0]
+        brand2d = logo_sdf_2d(xs, ys, BRAND_LOGO, BRAND_H, 0.0, BRAND_CY)
+        z_back = -D / 2.0
+        z_cut = z_back + BRAND_DEPTH          # hasta donde se hunde el grabado
+        engrave = op_intersect(brand2d[:, :, None], (Z - z_cut))  # dentro texto y Z<=z_cut
+        body = op_subtract(body, engrave)
+        del brand2d, engrave
 
     m_body = mesh_from_field(body, origin, spacing, "cuerpo")
     del body, pocket, nfc, kr
