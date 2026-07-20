@@ -41,18 +41,19 @@ FACE_H = 24.0     # alto del panel  (mas bajo  -> menos cuadrado)
 FACE_R = 6.0      # redondeo de las esquinas del panel
 FACE_CY = 2.0     # desplazamiento vertical del centro del panel (+ = arriba)
 PANEL_T = 1.8     # grosor del panel = profundidad del rebaje (queda al ras)
+FACE_BULGE = 1.5  # abombamiento del panel (0 = plano; >0 = carita con redondez)
 
 # Ojos y nariz (negros) EN RELIEVE (sobresalen de la cara)
 RELIEF = 1.2      # cuanto sobresalen respecto a la cara frontal
 EMBED = 1.0       # cuanto se hunden dentro del panel crema (para que peguen)
 
-EYE_DX = 9.5      # separacion horizontal de los ojos
+EYE_DX = 11.5     # separacion horizontal de los ojos (un poco mas separados)
 EYE_DY = 2.5      # altura de los ojos respecto al centro del panel
 EYE_R = 1.7       # radio del ojo (50% mas pequenos)
 
 # Nariz: bultito EN RELIEVE del MISMO color crema de la cara, muy pequena
 NOSE_DY = -4.0    # altura de la nariz respecto al centro del panel
-NOSE_R = 0.7      # radio de la nariz (muy pequena)
+NOSE_R = 0.8      # radio de la nariz (15% mas grande)
 NOSE_RELIEF = 0.5 # cuanto sobresale la nariz (relieve suave)
 
 # Cavidad INTERNA para el tag NFC, cerca de la base (-Y).
@@ -177,8 +178,15 @@ def main():
     hy = FACE_H / 2 - FACE_R
     rr = sdf_round_rect_2d(X, Y - FACE_CY, hx, hy, FACE_R)  # footprint del panel
 
-    black_back = front_z - EMBED      # los ojos/nariz se hunden hasta aca
-    black_front = front_z + RELIEF    # y sobresalen hasta aca
+    # Dome (abombamiento) del panel: superficie esferica de radio grande que
+    # hace que el centro de la cara sobresalga FACE_BULGE y los bordes queden
+    # casi al ras -> la carita se ve redondeada, no plana.
+    dome_R = (FACE_W / 2.0) ** 2 / (2.0 * FACE_BULGE) if FACE_BULGE > 1e-6 else 1e9
+    dome_zc = front_z + FACE_BULGE - dome_R
+    face_top = front_z + FACE_BULGE   # punto mas alto de la cara
+
+    black_back = front_z - EMBED         # los ojos se hunden hasta aca
+    black_front = face_top + RELIEF      # y sobresalen por encima del dome
 
     # --- Solido negro: SOLO los ojos, en relieve ---
     eye_l = cylinder_field(X, Y, Z, -EYE_DX, FACE_CY + EYE_DY, EYE_R, black_back, black_front)
@@ -187,7 +195,7 @@ def main():
 
     # --- Nariz: bultito crema (mismo color de la cara), muy pequeno ---
     nose_bump = cylinder_field(X, Y, Z, 0.0, FACE_CY + NOSE_DY, NOSE_R,
-                               pocket_floor, front_z + NOSE_RELIEF)
+                               pocket_floor, face_top + NOSE_RELIEF)
 
     print("Extrayendo mallas...")
     # --- Cuerpo amarillo: cubo redondeado menos el rebaje del panel ---
@@ -220,12 +228,14 @@ def main():
     m_body = mesh_from_field(body, origin, spacing, "cuerpo")
     del body, pocket, nfc, kr
 
-    # --- Panel crema: loza que rellena el rebaje, + nariz, - huecos de ojos ---
-    panel = op_intersect(rr, z_slab(Z, pocket_floor, front_z))
+    # --- Panel crema: rellena el rebaje y se abomba arriba (dome), + nariz, - ojos ---
+    panel = op_intersect(rr, (pocket_floor - Z))    # footprint + por encima del piso
+    dome = sphere_field(X, Y, Z, [0.0, FACE_CY, dome_zc], dome_R)
+    panel = op_intersect(panel, dome)               # tapa abombada (redondez)
     panel = op_union(panel, nose_bump)              # anade la naricita crema
     panel = op_subtract(panel, black)               # deja el hueco para los ojos
     m_face = mesh_from_field(panel, origin, spacing, "cara")
-    del panel, nose_bump
+    del panel, nose_bump, dome
 
     # --- Negro: los ojos en relieve ---
     m_black = mesh_from_field(black, origin, spacing, "ojos")
