@@ -7,9 +7,9 @@ import numpy as np
 import trimesh
 
 MESHES = [
-    ("cuerpo_amarillo.stl", [0.95, 0.80, 0.16], 9000, True),   # amarillo
-    ("cara_crema.stl",      [0.98, 0.92, 0.80], 12000, False),  # crema
-    ("ojos_negro.stl",      [0.09, 0.09, 0.10], 6000, False),   # negro
+    ("cuerpo_amarillo.stl", [0.95, 0.80, 0.16], 55000, True),   # amarillo
+    ("cara_crema.stl",      [0.98, 0.92, 0.80], 16000, False),  # crema
+    ("ojos_negro.stl",      [0.09, 0.09, 0.10], 5000, False),   # negro
 ]
 
 
