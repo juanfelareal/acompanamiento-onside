@@ -50,14 +50,14 @@ fig = plt.figure(figsize=(15, 5), facecolor="white")
 
 ax1 = fig.add_subplot(1, 3, 1, projection="3d")
 draw(ax1, 88, -90, [0.25, 0.2, 0.95],
-     title="Frontal (cara más rectangular y subida)")
+     title="Frontal (nariz x2 y más abajo, ojos +10% y más abajo)")
 
 ax2 = fig.add_subplot(1, 3, 2, projection="3d")
 draw(ax2, 50, -74, [0.35, 0.5, 0.8], title="3/4 (se ve la carita abombada)")
 
 # Corte horizontal a la altura de los ojos: muestra la curva del panel
 ax3 = fig.add_subplot(1, 3, 3)
-plane = dict(plane_origin=[0, 4.5, 0], plane_normal=[0, 1, 0])
+plane = dict(plane_origin=[0, 11.0, 0], plane_normal=[0, 1, 0])
 b = trimesh.load("cuerpo_amarillo.stl").section(**plane)
 for poly in b.discrete:
     ax3.fill(poly[:, 0], poly[:, 2], facecolor="#f7d84a", edgecolor="#b8941a",

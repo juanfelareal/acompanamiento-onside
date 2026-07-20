@@ -48,12 +48,12 @@ RELIEF = 1.2      # cuanto sobresalen respecto a la cara frontal
 EMBED = 1.0       # cuanto se hunden dentro del panel crema (para que peguen)
 
 EYE_DX = 11.5     # separacion horizontal de los ojos (un poco mas separados)
-EYE_DY = 2.5      # altura de los ojos respecto al centro del panel
-EYE_R = 2.24      # radio del ojo (otro 15% mas grande)
+EYE_DY = 1.0      # altura de los ojos respecto al centro (mas abajo, cerca de la nariz)
+EYE_R = 2.46      # radio del ojo (10% mas grande)
 
-# Nariz: bultito EN RELIEVE del MISMO color crema de la cara, muy pequena
-NOSE_DY = -4.0    # altura de la nariz respecto al centro del panel
-NOSE_R = 0.8      # radio de la nariz (15% mas grande)
+# Nariz: bultito EN RELIEVE del MISMO color crema de la cara
+NOSE_DY = -4.5    # altura de la nariz respecto al centro del panel (mas abajo)
+NOSE_R = 1.6      # radio de la nariz (el doble)
 NOSE_RELIEF = 0.5 # cuanto sobresale la nariz (relieve suave)
 
 # Cavidad INTERNA para el tag NFC, cerca de la base (-Y).
