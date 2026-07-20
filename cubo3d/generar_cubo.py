@@ -48,11 +48,11 @@ RELIEF = 1.2      # cuanto sobresalen respecto a la cara frontal
 EMBED = 1.0       # cuanto se hunden dentro del panel crema (para que peguen)
 
 EYE_DX = 13.0     # separacion horizontal de los ojos (un poco mas separados)
-EYE_DY = 1.0      # altura de los ojos respecto al centro (mas abajo, cerca de la nariz)
+EYE_DY = -0.5     # altura de los ojos respecto al centro (bajados un poco)
 EYE_R = 2.46      # radio del ojo (10% mas grande)
 
 # Nariz: bolita (esferita) del MISMO color crema, que sobresale de la cara
-NOSE_DY = -4.5      # altura de la nariz respecto al centro del panel
+NOSE_DY = -6.0      # altura de la nariz respecto al centro del panel (bajada con los ojos)
 NOSE_R = 1.6        # radio de la bolita de la nariz
 NOSE_PROTRUDE = 1.5 # cuanto sobresale la bolita por encima de la superficie
 
