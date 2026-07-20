@@ -96,7 +96,8 @@ KR_R = 1.5        # radio del orificio (~3 mm) -> pasa una cuerdita fina
 KR_A = 9.5 * S    # cercania a la punta de la esquina (escala con la esquina)
 
 # Resolucion de la grilla (mm/voxel). Mas pequeno = superficie mas lisa y mas lento.
-VOXEL = 0.30
+# 0.16 -> curvas geometricamente perfectas (sin facetas) para un acabado premium.
+VOXEL = 0.16
 
 # Colores (solo para previsualizacion .glb/.3mf)
 COL_BODY = [242, 205, 40, 255]     # amarillo
