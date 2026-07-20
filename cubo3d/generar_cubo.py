@@ -46,6 +46,10 @@ D = 50.0 * S   # fondo  (Z) ~34 mm  -> la cara mira hacia +Z
 # adhiere a la cama). Se recorta el fondo pillowy por un plano -> base estable.
 # Ademas deja el tag NFC a pocos mm de la base (lectura por debajo, confiable).
 BASE_CUT = 2.0  # mm que se recortan del fondo redondeado para dejar base plana
+# Espalda ligeramente CONVEXA (domo) para que NO se vea el borde del panel plano
+# trasero (que parecia un marco/sombra). Se funde suave con las esquinas (sin linea).
+BACK_DOME = 0.0    # 0 = espalda plana normal. (>0 abombaba pero no quitaba el borde)
+BACK_BLEND = 3.0   # radio de fundido del domo con el cuerpo (mm)
 R = 13.0 * S   # redondeo de esquinas/aristas (pillowy, como el referente)
 # Redondeo de las TAPAS (frente/atras). Al imprimir DE PIE (cara al frente) el
 # frente sale liso aunque sea pillowy, asi que se deja = R (sin achatar).
@@ -119,7 +123,7 @@ KR_A = 9.5 * S    # cercania a la punta de la esquina (escala con la esquina)
 BRAND_ON = True
 BRAND_LOGO = "bloki_logo_mask.png"  # mascara del logo (blanco = letras)
 BRAND_H = 6.0        # altura del logo (mm) - sutil
-BRAND_DEPTH = 0.45   # profundidad del grabado (mm) - sutil
+BRAND_DEPTH = 0.6    # profundidad del grabado (mm)
 BRAND_CY = -6.5      # centro vertical: ABAJO, centrado en la espalda (Y, mm)
 
 # Resolucion de la grilla (mm/voxel). Mas pequeno = superficie mas lisa y mas lento.
@@ -181,6 +185,12 @@ def op_subtract(a, b):
 
 def op_intersect(a, b):
     return np.maximum(a, b)
+
+
+def op_smin(a, b, k):
+    """Union SUAVE: funde a y b redondeando la union con radio ~k (sin aristas)."""
+    h = np.clip(0.5 + 0.5 * (b - a) / k, 0.0, 1.0)
+    return b * (1 - h) + a * h - k * h * (1 - h)
 
 
 def cylinder_field(X, Y, Z, cx, cy, r, z0, z1):
@@ -413,6 +423,20 @@ def main():
         body = np.where(Z >= 0,
                         sdf_round_box_aniso(X, Y, Z, W/2, H/2, D/2, R, RZ_FRONT),
                         sdf_round_box_aniso(X, Y, Z, W/2, H/2, D/2, R, RZ_BACK))
+    # ESPALDA CONVEXA (domo): funde un paraboloide trasero con el cuerpo para que
+    # el borde del panel plano trasero (que parecia un marco) desaparezca. La
+    # superficie del domo (z_dome) se reutiliza para grabar el logo a profundidad
+    # uniforme sobre la curva.
+    r0x, r0y = W / 2 - R, H / 2 - R
+    z_dome = -D / 2 - BACK_DOME + BACK_DOME * ((X / r0x) ** 2 + (Y / r0y) ** 2)
+    if BACK_DOME > 0:
+        # LENTE ACOTADA: solo la capa fina entre la superficie del domo (z_dome) y
+        # el panel plano (-D/2), dentro del footprint del panel. Se funde suave con
+        # op_smin -> la espalda queda convexa y el borde del panel se difumina.
+        lens = op_intersect(op_intersect(z_dome - Z, Z + D / 2),
+                            sdf_round_rect_2d(X, Y, r0x, r0y, R))
+        body = op_smin(body, lens, BACK_BLEND)
+
     # BASE PLANA: recorta el fondo redondeado por un plano horizontal -> Bloki se
     # para y se adhiere a la cama al imprimir de pie (y deja el tag cerca de la base).
     y_base = -H / 2 + BASE_CUT
@@ -459,9 +483,9 @@ def main():
         xs = X[:, 0, 0]
         ys = Y[0, :, 0]
         brand2d = logo_sdf_2d(xs, ys, BRAND_LOGO, BRAND_H, 0.0, BRAND_CY)
-        z_back = -D / 2.0
-        z_cut = z_back + BRAND_DEPTH          # hasta donde se hunde el grabado
-        engrave = op_intersect(brand2d[:, :, None], (Z - z_cut))  # dentro texto y Z<=z_cut
+        # el corte sigue la superficie del domo -> grabado de profundidad pareja
+        z_cut = z_dome + BRAND_DEPTH
+        engrave = op_intersect(brand2d[:, :, None], (Z - z_cut))  # dentro logo y Z<=z_cut
         body = op_subtract(body, engrave)
         del brand2d, engrave
 
