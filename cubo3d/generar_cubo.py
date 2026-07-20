@@ -310,12 +310,22 @@ def main():
 
     # --- 3MF multicolor listo para AMS (Bambu Studio A1 Mini) ---
     # Cada color es una pieza separada dentro de un mismo objeto.
+    # Rotamos para que el modelo entre PARADO SOBRE LA BASE (la base -Y queda
+    # abajo, en la cama). Asi la cavidad del NFC se va formando abierta hacia
+    # arriba durante la impresion y el tag se puede introducir en la pausa.
+    stand = np.array([[1, 0, 0, 0],
+                      [0, 0, -1, 0],
+                      [0, 1, 0, 0],
+                      [0, 0, 0, 1]], dtype=float)
+    mb, mf, mk = m_body.copy(), m_face.copy(), m_black.copy()
+    for mm in (mb, mf, mk):
+        mm.apply_transform(stand)
     export_3mf_ams([
-        (m_body, "Amarillo (cuerpo)", "F2CD28"),
-        (m_face, "Crema (cara)", "FAEBCD"),
-        (m_black, "Negro (ojos)", "1E1E1E"),
+        (mb, "Amarillo (cuerpo)", "F2CD28"),
+        (mf, "Crema (cara)", "FAEBCD"),
+        (mk, "Negro (ojos)", "1E1E1E"),
     ], "Bloki_AMS_A1mini.3mf")
-    print("AMS: Bloki_AMS_A1mini.3mf (3 colores separados)")
+    print("AMS: Bloki_AMS_A1mini.3mf (parado sobre la base, 3 colores)")
 
     # Escena a color para previsualizar / compartir
     m_body.visual.face_colors = COL_BODY
