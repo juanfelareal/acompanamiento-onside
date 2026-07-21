@@ -132,7 +132,7 @@ BRAND_CY = -9.58 * S  # centro vertical (abajo, centrado) - escala con el cuerpo
 # orejas reales; erguidas -> imprimen de pie sin soportes. Solo cambian el CUERPO
 # (la cara y los ojos son identicos a los de Bloki normal).
 EARS_ON = True
-EAR_FLAT = 0.42       # aplanado en Z (frente-atras) - orejas planas tipo paleta
+EAR_FLAT = 0.82       # profundidad de la oreja (0.8 = regordeta, con volumen)
 EAR_TOP = 37.0 * S    # espacio extra de grilla hacia +Y para alojar las orejas
 
 # Resolucion de la grilla (mm/voxel). Mas pequeno = superficie mas lisa y mas lento.
@@ -231,23 +231,33 @@ def capsule_z(X, Y, Z, a, b, ra, rb, flat):
     return np.sqrt(dx * dx + dy * dy + dz * dz) - (ra + (rb - ra) * h)
 
 
-def ear_field(X, Y, Z, sign):
-    """Una oreja de conejo (lado sign=+1/-1): PALETA ancha, plana y con la punta
-    REDONDEADA (no puntuda), con un 'flop' suave hacia adelante. Se arma con una
-    cadena de capsulas de radio grande (mantiene el ancho) fusionadas suave."""
-    Yt = H / 2.0
-    P = [(sign * 4.0 * S, Yt - 3.0 * S, 0.0),
-         (sign * 5.0 * S, Yt + 6.0 * S, 0.0),
-         (sign * 6.0 * S, Yt + 14.0 * S, 0.3 * S),
-         (sign * 6.8 * S, Yt + 21.0 * S, 1.0 * S),
-         (sign * 7.2 * S, Yt + 27.0 * S, 2.5 * S),
-         (sign * 7.2 * S, Yt + 31.0 * S, 4.5 * S)]   # punta con flop hacia adelante
-    Rr = [6.5 * S, 8.8 * S, 8.8 * S, 7.8 * S, 5.6 * S, 3.8 * S]  # ancho constante, punta redonda
+def ear_chain(X, Y, Z, P, Rr):
+    """Una oreja: cadena de capsulas (centros P, radios Rr) fusionadas suave. Radios
+    grandes -> REGORDETA con volumen; EAR_FLAT ~0.8 le da profundidad (no plana);
+    la punta redondeada. La linea de P define la curva (erguida o doblada)."""
     e = None
     for i in range(len(P) - 1):
         c = capsule_z(X, Y, Z, P[i], P[i + 1], Rr[i], Rr[i + 1], EAR_FLAT)
-        e = c if e is None else op_smin(e, c, 2.5 * S)
+        e = c if e is None else op_smin(e, c, 2.2 * S)
     return e
+
+
+def build_ears(X, Y, Z):
+    """Dos orejas de conejo DISTINTAS (asimetricas) y SEPARADAS, como el referente:
+    la A erguida (leve curva) y la B 'encogida' (vertical y el tercio de arriba cae
+    hacia adelante y abajo). Regordetas y con profundidad."""
+    Yt = H / 2.0
+    # A: erguida (lado +X), leve inclinacion afuera, punta apenas curva
+    PA = [(6.5 * S, Yt - 2 * S, 0), (8.0 * S, Yt + 11 * S, -0.6 * S),
+          (9.4 * S, Yt + 22 * S, -0.6 * S), (10.6 * S, Yt + 31 * S, 0.6 * S),
+          (11.3 * S, Yt + 38 * S, 3.0 * S)]
+    RA = [7.6 * S, 8.7 * S, 8.1 * S, 6.4 * S, 4.2 * S]
+    # B: encogida/doblada (lado -X), vertical y el tercio de arriba cae adelante+abajo
+    PB = [(-6.5 * S, Yt - 2 * S, 0), (-8.0 * S, Yt + 11 * S, 0.3 * S),
+          (-9.2 * S, Yt + 21 * S, 1.4 * S), (-10.0 * S, Yt + 28 * S, 4.0 * S),
+          (-10.2 * S, Yt + 29 * S, 7.5 * S), (-9.9 * S, Yt + 27 * S, 10.5 * S)]
+    RB = [7.6 * S, 8.7 * S, 8.1 * S, 6.6 * S, 5.0 * S, 3.6 * S]
+    return op_union(ear_chain(X, Y, Z, PA, RA), ear_chain(X, Y, Z, PB, RB))
 
 
 def logo_sdf_2d(xs, ys, logo_path, height, cx, cy, mirror_x=True):
@@ -479,8 +489,8 @@ def main():
 
     # OREJAS de conejo (version conejito): se fusionan al cuerpo en la parte alta.
     if EARS_ON:
-        ears = op_smin(ear_field(X, Y, Z, +1), ear_field(X, Y, Z, -1), 2.0 * S)
-        body = op_smin(body, ears, 3.5 * S)    # crecen suave desde la cabeza
+        ears = build_ears(X, Y, Z)
+        body = op_smin(body, ears, 3.0 * S)    # crecen suave desde la cabeza
         del ears
 
     # BASE PLANA: recorta el fondo redondeado por un plano horizontal -> Bloki se
