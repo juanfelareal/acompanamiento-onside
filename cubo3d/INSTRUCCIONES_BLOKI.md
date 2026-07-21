@@ -26,7 +26,8 @@ orificio para llavero + **logo BLOKI grabado en la espalda**. Se imprime **de pi
 usar los colores que quieras; cada pieza es de 1 solo color, así que **no hay
 cambios de color ni desperdicio**.
 
-**Dimensiones del cuerpo:** 40.7 × 36 × 34 mm (ancho × alto × fondo).
+**Dimensiones del cuerpo:** 37 × 32.5 × 31 mm (ancho × alto × fondo). Tamaño
+mínimo manteniendo las proporciones (limitado por el tag NFC de 25 mm).
 
 ---
 

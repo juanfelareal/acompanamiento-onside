@@ -55,7 +55,7 @@ ax.text((vz0 + vz1) / 2, vy0 + 0.85, "TAG NFC (acostado)", color="white",
 # flecha de la PAUSA (viene desde arriba: se apoya el tag)
 ax.annotate("", xy=((vz0 + vz1) / 2, vy1 + 0.2), xytext=((vz0 + vz1) / 2, TOP_Y + 5),
             arrowprops=dict(arrowstyle="-|>", color="#d12", lw=2.5), zorder=6)
-ax.text((vz0 + vz1) / 2, TOP_Y + 5.6, f"PAUSA temprana a ~{ph(PAUSE_Y):.0f} mm\n"
+ax.text((vz0 + vz1) / 2, TOP_Y + 5.6, f"PAUSA temprana a ~{ph(PAUSE_Y):.1f} mm\n"
         "(apoyar el tag plano\ny reanudar)", color="#d12", fontsize=10.5,
         fontweight="bold", ha="center", va="bottom", zorder=6)
 

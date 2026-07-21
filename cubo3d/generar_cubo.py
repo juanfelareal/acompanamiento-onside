@@ -33,8 +33,9 @@ import trimesh
 # ESCALA GLOBAL: el diseno de referencia da un Bloki de 56 mm de alto. Se
 # escala todo proporcionalmente para que la ALTURA final sea TARGET_H.
 # El tag NFC y el orificio del cordon NO se escalan (son piezas/funciones reales).
-TARGET_H = 38.0            # altura final del Bloki (mm) - minimo para el tag NFC
-S = TARGET_H / 56.0        # factor de escala proporcional
+TARGET_H = 34.5            # altura final (mm) - MINIMO manteniendo proporciones:
+                           # deja ~1.75 mm de pared sellando el tag (limite seguro).
+S = TARGET_H / 56.0        # factor de escala proporcional (todo escala con esto)
 
 # Cuerpo (cubo redondeado)
 W = 60.0 * S   # ancho  (X)
@@ -122,9 +123,9 @@ KR_A = 9.5 * S    # cercania a la punta de la esquina (escala con la esquina)
 # imprimir de pie, la espalda es pared vertical -> el grabado sale nitido.
 BRAND_ON = True
 BRAND_LOGO = "bloki_logo_mask.png"  # mascara del logo (blanco = letras)
-BRAND_H = 6.0        # altura del logo (mm) - sutil
-BRAND_DEPTH = 0.6    # profundidad del grabado (mm)
-BRAND_CY = -6.5      # centro vertical: ABAJO, centrado en la espalda (Y, mm)
+BRAND_H = 8.84 * S   # altura del logo - escala con el cuerpo (proporcional)
+BRAND_DEPTH = 0.6    # profundidad del grabado (mm) - se deja absoluta (la sombra)
+BRAND_CY = -9.58 * S  # centro vertical (abajo, centrado) - escala con el cuerpo
 
 # Resolucion de la grilla (mm/voxel). Mas pequeno = superficie mas lisa y mas lento.
 # 0.16 -> curvas geometricamente perfectas (sin facetas) para un acabado premium.
