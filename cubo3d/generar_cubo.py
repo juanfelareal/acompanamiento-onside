@@ -515,6 +515,12 @@ def main():
     m_black.export("ojos_negro.stl")
     print("\nSTLs (cada uno 1 color): cuerpo_amarillo, cara_crema, ojos_negro")
 
+    # .3mf por pieza (cada una 1 color) para Bambu Studio - se envian por separado
+    export_3mf_ams([(m_body, "cuerpo_amarillo", "F2CD28")], "cuerpo_amarillo.3mf")
+    export_3mf_ams([(m_face, "cara_crema", "FAEBCD")], "cara_crema.3mf")
+    export_3mf_ams([(m_black, "ojos_negro", "1E1E1E")], "ojos_negro.3mf")
+    print(".3mf (cada uno 1 color): cuerpo_amarillo, cara_crema, ojos_negro")
+
     # Escena a color para previsualizar / compartir (todo ensamblado)
     m_body.visual.face_colors = COL_BODY
     m_face.visual.face_colors = COL_FACE
