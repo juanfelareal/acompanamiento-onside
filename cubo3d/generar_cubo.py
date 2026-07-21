@@ -127,6 +127,14 @@ BRAND_H = 8.84 * S   # altura del logo - escala con el cuerpo (proporcional)
 BRAND_DEPTH = 0.6    # profundidad del grabado (mm) - se deja absoluta (la sombra)
 BRAND_CY = -9.58 * S  # centro vertical (abajo, centrado) - escala con el cuerpo
 
+# OREJAS de conejo (version 'conejito'). Se fusionan al cuerpo (mismo color) en la
+# parte de arriba. Escalan con S (misma proporcion). Aplanadas frente-atras como
+# orejas reales; erguidas -> imprimen de pie sin soportes. Solo cambian el CUERPO
+# (la cara y los ojos son identicos a los de Bloki normal).
+EARS_ON = True
+EAR_FLAT = 0.42       # aplanado en Z (frente-atras) - orejas planas tipo paleta
+EAR_TOP = 37.0 * S    # espacio extra de grilla hacia +Y para alojar las orejas
+
 # Resolucion de la grilla (mm/voxel). Mas pequeno = superficie mas lisa y mas lento.
 # 0.16 -> curvas geometricamente perfectas (sin facetas) para un acabado premium.
 VOXEL = 0.16
@@ -210,6 +218,36 @@ def cylinder_axis_field(X, Y, Z, A, u, r):
 
 def sphere_field(X, Y, Z, C, r):
     return np.sqrt((X - C[0])**2 + (Y - C[1])**2 + (Z - C[2])**2) - r
+
+
+def capsule_z(X, Y, Z, a, b, ra, rb, flat):
+    """Capsula (segmento redondeado) de a->b con radio ra->rb (conica), APLANADA
+    en Z por 'flat' (<1 = mas delgada frente-atras). Base de las orejas."""
+    px, py, pz = X - a[0], Y - a[1], (Z - a[2]) / flat
+    bx, by, bz = b[0] - a[0], b[1] - a[1], (b[2] - a[2]) / flat
+    baba = bx * bx + by * by + bz * bz
+    h = np.clip((px * bx + py * by + pz * bz) / baba, 0.0, 1.0)
+    dx, dy, dz = px - bx * h, py - by * h, pz - bz * h
+    return np.sqrt(dx * dx + dy * dy + dz * dz) - (ra + (rb - ra) * h)
+
+
+def ear_field(X, Y, Z, sign):
+    """Una oreja de conejo (lado sign=+1/-1): PALETA ancha, plana y con la punta
+    REDONDEADA (no puntuda), con un 'flop' suave hacia adelante. Se arma con una
+    cadena de capsulas de radio grande (mantiene el ancho) fusionadas suave."""
+    Yt = H / 2.0
+    P = [(sign * 4.0 * S, Yt - 3.0 * S, 0.0),
+         (sign * 5.0 * S, Yt + 6.0 * S, 0.0),
+         (sign * 6.0 * S, Yt + 14.0 * S, 0.3 * S),
+         (sign * 6.8 * S, Yt + 21.0 * S, 1.0 * S),
+         (sign * 7.2 * S, Yt + 27.0 * S, 2.5 * S),
+         (sign * 7.2 * S, Yt + 31.0 * S, 4.5 * S)]   # punta con flop hacia adelante
+    Rr = [6.5 * S, 8.8 * S, 8.8 * S, 7.8 * S, 5.6 * S, 3.8 * S]  # ancho constante, punta redonda
+    e = None
+    for i in range(len(P) - 1):
+        c = capsule_z(X, Y, Z, P[i], P[i + 1], Rr[i], Rr[i + 1], EAR_FLAT)
+        e = c if e is None else op_smin(e, c, 2.5 * S)
+    return e
 
 
 def logo_sdf_2d(xs, ys, logo_path, height, cx, cy, mirror_x=True):
@@ -350,8 +388,9 @@ def mesh_from_field(field, origin, spacing, name, min_vol_mm3=1.0):
 def build_grid():
     # float32 -> mitad de memoria (a 0.16 mm la precision sobra) para no agotar RAM
     pad = R + 5.0
+    top_extra = EAR_TOP if EARS_ON else 0.0   # espacio arriba para las orejas
     xs = np.arange(-W / 2 - pad, W / 2 + pad + VOXEL, VOXEL, dtype=np.float32)
-    ys = np.arange(-H / 2 - pad, H / 2 + pad + VOXEL, VOXEL, dtype=np.float32)
+    ys = np.arange(-H / 2 - pad, H / 2 + top_extra + pad + VOXEL, VOXEL, dtype=np.float32)
     # dejar espacio al frente para el relieve de ojos/nariz
     zs = np.arange(-D / 2 - pad, D / 2 + RELIEF + pad + VOXEL, VOXEL, dtype=np.float32)
     X, Y, Z = np.meshgrid(xs, ys, zs, indexing="ij")
@@ -438,6 +477,12 @@ def main():
                             sdf_round_rect_2d(X, Y, r0x, r0y, R))
         body = op_smin(body, lens, BACK_BLEND)
 
+    # OREJAS de conejo (version conejito): se fusionan al cuerpo en la parte alta.
+    if EARS_ON:
+        ears = op_smin(ear_field(X, Y, Z, +1), ear_field(X, Y, Z, -1), 2.0 * S)
+        body = op_smin(body, ears, 3.5 * S)    # crecen suave desde la cabeza
+        del ears
+
     # BASE PLANA: recorta el fondo redondeado por un plano horizontal -> Bloki se
     # para y se adhiere a la cama al imprimir de pie (y deja el tag cerca de la base).
     y_base = -H / 2 + BASE_CUT
@@ -510,23 +555,27 @@ def main():
     #   1) cuerpo_amarillo.stl  (amarillo)  - lleva el NFC sellado (pausa)
     #   2) cara_crema.stl       (crema)     - encaja en el rebaje del cuerpo
     #   3) ojos_negro.stl       (negro, x2) - encajan en los huecos de la carita
-    m_body.export("cuerpo_amarillo.stl")
+    # Con orejas -> archivos "_conejito" (no pisa el Bloki normal). La cara y los
+    # ojos son identicos en ambas versiones.
+    cuerpo = "cuerpo_conejito" if EARS_ON else "cuerpo_amarillo"
+    m_body.export(cuerpo + ".stl")
     m_face.export("cara_crema.stl")
     m_black.export("ojos_negro.stl")
-    print("\nSTLs (cada uno 1 color): cuerpo_amarillo, cara_crema, ojos_negro")
+    print(f"\nSTLs (cada uno 1 color): {cuerpo}, cara_crema, ojos_negro")
 
     # .3mf por pieza (cada una 1 color) para Bambu Studio - se envian por separado
-    export_3mf_ams([(m_body, "cuerpo_amarillo", "F2CD28")], "cuerpo_amarillo.3mf")
+    export_3mf_ams([(m_body, cuerpo, "F2CD28")], cuerpo + ".3mf")
     export_3mf_ams([(m_face, "cara_crema", "FAEBCD")], "cara_crema.3mf")
     export_3mf_ams([(m_black, "ojos_negro", "1E1E1E")], "ojos_negro.3mf")
-    print(".3mf (cada uno 1 color): cuerpo_amarillo, cara_crema, ojos_negro")
+    print(f".3mf (cada uno 1 color): {cuerpo}, cara_crema, ojos_negro")
 
     # Escena a color para previsualizar / compartir (todo ensamblado)
     m_body.visual.face_colors = COL_BODY
     m_face.visual.face_colors = COL_FACE
     m_black.visual.face_colors = COL_BLACK
-    trimesh.Scene([m_body, m_face, m_black]).export("cubo_personaje.glb")
-    print("Color: cubo_personaje.glb")
+    glb = "conejito.glb" if EARS_ON else "cubo_personaje.glb"
+    trimesh.Scene([m_body, m_face, m_black]).export(glb)
+    print("Color:", glb)
 
     b = (m_body + m_face + m_black).bounds
     dims = b[1] - b[0]
