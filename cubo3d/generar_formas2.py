@@ -16,6 +16,7 @@ G.EARS_ON = False
 G.VOXEL = 0.20
 G.NFC_CY = -13.0        # cabe en las 4 siluetas; lee a ~3 mm de la base
 G.BASE_CUT = 0.0        # cada silueta ya trae su base plana
+G.BRAND_ON = False      # sin logo en prototipos de forma (espaldas curvas)
 f32 = np.float32
 W, H, D, R = G.W, G.H, G.D, G.R
 T.W, T.H, T.D, T.R, T.S = W, H, D, R, G.S
@@ -44,8 +45,12 @@ def face_boss(X, Y, Z):
 
 
 # ---- siluetas ----
+# CARA PLANA AL FRENTE: el frente se mantiene en Z=+D/2 (plano) y el afinado/
+# redondeo ocurre por DETRAS (-Z) y en el ancho (X). Asi la cara siempre va a ras.
 def taper_body(X, Y, Z, t):
-    core = G.sdf_round_rect_2d(X, Z, (W / 2) * t - R, (D / 2) * t - R, 0.0)
+    cz = (D / 4.0) * (1.0 - t)      # corre el centro: frente fijo en +D/2, atras afina
+    hzc = (D / 4.0) * (1.0 + t)     # semi-profundidad
+    core = G.sdf_round_rect_2d(X, Z - cz, (W / 2) * t - R, hzc - R, 0.0)
     ty = Y - (H / 2 - R)
     ext = np.hypot(np.maximum(core, 0.0), np.maximum(ty, 0.0))
     ins = np.minimum(np.maximum(core, ty), 0.0)
@@ -61,20 +66,24 @@ def shape_huevo(X, Y, Z):
 
 def shape_trapecio(X, Y, Z):
     u = np.clip((Y + H / 2) / H, 0.0, 1.0).astype(f32)
-    t = (1.06 - 0.16 * u).astype(f32)                       # draft sutil
+    t = (1.07 - 0.17 * u).astype(f32)                       # draft sutil (base mas ancha)
     return taper_body(X, Y, Z, t)
 
 
 def shape_domo(X, Y, Z):
-    y0 = -H / 2
-    domH = D / 2 * 1.05
-    y_sh = H / 2 - domH
+    """Cuerpo recto (frente plano) hasta arriba del panel, luego CUPULA que se
+    redondea SOLO hacia atras y los lados (el frente sigue plano)."""
+    y_sh = 10.5                                             # arranca la cupula sobre el panel
+    domH = H / 2 - y_sh                                     # alto de la cupula
     core = G.sdf_round_rect_2d(X, Z, W / 2 - R, D / 2 - R, 0.0)
-    wall2d = core - R
-    walls = op_intersect(wall2d, G.z_slab(Y, y0, y_sh))     # paredes rectas
-    ex = (X / (W / 2)) ** 2 + ((Y - y_sh) / domH) ** 2 + (Z / (D / 2)) ** 2
-    dome = (np.sqrt(ex) - 1.0) * min(W / 2, D / 2)
-    body = G.op_smin(walls, dome.astype(f32), 2.0)
+    wall2d = core - R                                       # paredes rectas, frente plano
+    walls = op_intersect(wall2d, G.z_slab(Y, -H / 2, y_sh))
+    # cupula: media elipsoide con el FRENTE plano (se corre en +Z para no recortar la cara)
+    cz = D / 2 - domH                                       # centro Z de la elipsoide
+    ex = (X / (W / 2)) ** 2 + ((Y - y_sh) / domH) ** 2 + ((Z - cz) / domH) ** 2
+    dome = (np.sqrt(ex) - 1.0) * domH
+    dome = op_intersect(dome, (Z - D / 2))                 # nunca pasa del frente plano
+    body = G.op_smin(walls, dome.astype(f32), 1.5)
     return op_intersect(body, (-H / 2 - Y)).astype(f32)
 
 
