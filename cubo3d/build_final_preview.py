@@ -77,9 +77,12 @@ HTML = r"""<div id="wrap">
   <canvas id="c"></canvas>
   <div id="hud">
     <div class="row"><b>Bloki</b> — arrastra para rotar · rueda para zoom</div>
-    <div class="row muted" id="lbl">Textura: ranurado</div>
+    <div class="row muted">Elige la textura:</div>
     <div class="row">
-      <button id="tex">Cambiar textura</button>
+      <button id="b0" class="tx on">Ranurado</button>
+      <button id="b1" class="tx">Dimples</button>
+    </div>
+    <div class="row">
       <button id="explode">Ver piezas separadas</button>
       <button id="reset">Reiniciar</button>
     </div>
@@ -99,6 +102,10 @@ HTML = r"""<div id="wrap">
   button{font:13px inherit;padding:6px 12px;margin-right:8px;margin-top:4px;border:0;border-radius:8px;cursor:pointer;
          background:#2d6cdf;color:#fff;font-weight:600}
   button:hover{background:#1f5ad0}
+  button.tx{background:#e4e9f2;color:#425}
+  button.tx.on{background:#2d6cdf;color:#fff;box-shadow:0 0 0 2px rgba(45,108,223,.35)}
+  @media (prefers-color-scheme:dark){button.tx{background:#2a3140;color:#c7d0de}
+    button.tx.on{background:#2d6cdf;color:#fff}}
 </style>
 <script>
 const DATA = __DATA__;
@@ -139,8 +146,8 @@ cv.addEventListener('pointermove',e=>{if(!drag)return;ry+=(e.clientX-px)*0.01;rx
   rx=Math.max(-1.5,Math.min(1.5,rx));px=e.clientX;py=e.clientY;});
 cv.addEventListener('wheel',e=>{e.preventDefault();dist*=Math.exp(e.deltaY*0.001);
   dist=Math.max(RAD*1.6,Math.min(RAD*7,dist));},{passive:false});
-const lbl=document.getElementById('lbl');
-document.getElementById('tex').onclick=()=>{cur=(cur+1)%B.length;lbl.textContent='Textura: '+DATA.bodies[cur].name;};
+const tb=[document.getElementById('b0'),document.getElementById('b1')];
+tb.forEach((btn,i)=>btn.onclick=()=>{cur=i;tb.forEach((b,j)=>b.classList.toggle('on',j===i));});
 document.getElementById('explode').onclick=()=>{target=target?0:1;};
 document.getElementById('reset').onclick=()=>{rx=-0.2;ry=0.6;dist=RAD*3.0;target=0;};
 function resize(){const dpr=Math.min(devicePixelRatio||1,2);cv.width=cv.clientWidth*dpr;cv.height=cv.clientHeight*dpr;gl.viewport(0,0,cv.width,cv.height);}
