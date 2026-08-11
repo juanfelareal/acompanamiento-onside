@@ -9,8 +9,10 @@ import trimesh
 from pathlib import Path
 
 BODIES = [
-    ("ranurado", "cuerpo_ranurado_final.stl", 135000),
-    ("dimples",  "cuerpo_dimples_final.stl",  135000),
+    ("huevo",    "cuerpo_huevo.stl",    88000),
+    ("domo",     "cuerpo_domo.stl",     88000),
+    ("trapecio", "cuerpo_trapecio.stl", 88000),
+    ("bisel",    "cuerpo_bisel.stl",    88000),
 ]
 YEL = [0.95, 0.80, 0.16]
 FACE = ("cara_crema.stl", [0.98, 0.92, 0.80], 22000)
@@ -77,10 +79,9 @@ HTML = r"""<div id="wrap">
   <canvas id="c"></canvas>
   <div id="hud">
     <div class="row"><b>Bloki</b> — arrastra para rotar · rueda para zoom</div>
-    <div class="row muted">Elige la textura:</div>
+    <div class="row muted">Elige la forma:</div>
     <div class="row">
-      <button id="b0" class="tx on">Ranurado</button>
-      <button id="b1" class="tx">Dimples</button>
+      <span id="txbtns"></span>
     </div>
     <div class="row">
       <button id="explode">Ver piezas separadas</button>
@@ -174,5 +175,5 @@ function frame(){exploded+=(target-exploded)*0.12;
 frame();
 </script>"""
 HTML = HTML.replace("__DATA__", DATA)
-Path("preview_texturas.html").write_text(HTML, encoding="utf-8")
-print(f"Guardado preview_texturas.html ({len(HTML.encode())/1024/1024:.1f} MB)")
+Path("preview_formas2.html").write_text(HTML, encoding="utf-8")
+print(f"Guardado preview_formas2.html ({len(HTML.encode())/1024/1024:.1f} MB)")
