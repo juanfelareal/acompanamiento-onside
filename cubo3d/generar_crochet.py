@@ -19,12 +19,33 @@ T.W, T.H, T.D, T.R, T.S = W, H, D, R, G.S
 F.W, F.H, F.D, F.R = W, H, D, R
 
 
+def arc_len(X, Z, hx, hz, r):
+    """Longitud de arco alrededor del contorno (rect redondeado) en funcion de
+    (X,Z). Mapear la textura por ESTO (no por angulo) evita que el tejido se
+    deforme en las aristas/esquinas verticales. Devuelve (s, perimetro)."""
+    ax, az = hx - r, hz - r
+    quarter = ax + az + 0.5 * np.pi * r
+    q = np.where(X >= 0, np.where(Z >= 0, 0, 3), np.where(Z >= 0, 1, 2))
+    px = np.where(q == 0, X, np.where(q == 1, Z, np.where(q == 2, -X, -Z)))
+    pz = np.where(q == 0, Z, np.where(q == 1, -X, np.where(q == 2, -Z, X)))
+    px, pz = np.abs(px), np.abs(pz)
+    even = (q % 2 == 0)
+    ax_ = np.where(even, ax, az); az_ = np.where(even, az, ax)
+    ang = np.arctan2(np.maximum(pz - az_, 0.0), np.maximum(px - ax_, 0.0))
+    corner = (px > ax_) & (pz > az_)
+    top = (px <= ax_) & (pz >= az_)
+    l = np.where(corner, az_ + r * ang,
+                 np.where(top, az_ + r * (np.pi / 2) + (ax_ - px), pz))
+    return (q * quarter + l).astype(f32), 4.0 * quarter
+
+
 def tex_crochet(X, Y, Z):
-    """Textura CHEVRON/HERRINGBONE (espiga), como la abeja: bandas de columna con
-    diagonal alterna -> zigzag continuo. Filas alrededor (theta), sube en Y."""
-    theta = np.arctan2(Z, X).astype(f32)
-    Ncols = 96                                   # puntos alrededor (~1.4 mm c/u, como la abeja)
-    col = theta / (2 * np.pi) * Ncols
+    """Textura CHEVRON/HERRINGBONE (espiga), como la abeja. Se mapea por LONGITUD
+    DE ARCO alrededor del contorno (no por angulo) -> sin deformacion en aristas."""
+    s, P = arc_len(X, Z, W / 2, D / 2, R)        # distancia real alrededor
+    pitch = 1.4                                   # tamano del punto (mm, como la abeja)
+    Ncols = 2 * round(P / pitch / 2)              # par, para costura continua
+    col = s / (P / Ncols)                         # columnas parejas en todo el contorno
     rowH = 1.4                                    # alto de fila (mm)
     row = (Y - (-H / 2)) / rowH
     bw = 1.0                                      # ancho de banda (1 = chevron fino)
