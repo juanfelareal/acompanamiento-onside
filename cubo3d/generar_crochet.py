@@ -10,7 +10,7 @@ import generar_formas as F      # trae shape_chaflan / op_smax (mismos parametro
 
 G.EARS_ON = False
 G.VOXEL = 0.18
-G.BRAND_ON = True               # logo BLOKI grabado en la espalda (abajo)
+G.BRAND_ON = False              # el logo se graba en tex_crochet (sigue la superficie)
 G.BASE_CUT = 0.0                # la base plana la pone shape_chaflan (borde redondeado)
 G.NFC_CY = -9.0                 # zona ancha, pared sana; lee a ~5 mm de la base
 f32 = np.float32
@@ -37,7 +37,23 @@ def tex_crochet(X, Y, Z):
     yarn = np.clip(1.0 - (d / w) ** 2, 0.0, 1.0) ** 0.5
     amp = 0.38                                    # relieve del hilo (mm)
     yfade = np.clip((H / 2 - Y) / R, 0.0, 1.0).astype(f32)
-    return (-amp * yarn * yfade * T.pole_fade(X, Z)).astype(f32)
+    tex = amp * yarn * yfade * T.pole_fade(X, Z)  # magnitud del relieve del tejido
+
+    # --- LOGO BLOKI en la ESPALDA: PLACA lisa recogida + letras hundidas ---
+    # Se quita el tejido en una placa (etiqueta lisa) y las letras se hunden mas
+    # -> se lee nitido. Todo sigue la superficie curva y se limita a la espalda.
+    xs = X[:, 0, 0]; ys = Y[0, :, 0]
+    lcx, lcy = 0.0, -5.9
+    logo2d = G.logo_sdf_2d(xs, ys, "bloki_logo_mask.png", 5.45, lcx, lcy)[:, :, None]
+    gate = np.clip((-6.0 - Z) / 2.0, 0.0, 1.0).astype(f32)      # solo espalda
+    lmask = np.clip(0.5 - logo2d / 0.4, 0.0, 1.0).astype(f32)   # letras
+    plaque2d = G.sdf_round_rect_2d(X, Y - lcy, 6.6, 4.1, 1.6)   # placa (etiqueta)
+    pmask = np.clip(0.5 - plaque2d / 0.6, 0.0, 1.0).astype(f32)
+    pm = pmask * gate
+    lm = lmask * pm
+    PLAQUE_D, LETTER_D = 0.35, 0.55
+    disp = -tex * (1.0 - pm) + PLAQUE_D * pm + LETTER_D * lm
+    return disp.astype(f32)
 
 
 def build_laminae(X, Y, Z):
