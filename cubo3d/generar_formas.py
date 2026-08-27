@@ -41,14 +41,19 @@ def body_pillowy(X, Y, Z):
 
 
 def shape_chaflan(X, Y, Z):
-    """Pillowy, pero el tercio de abajo se reemplaza por un bisel ~60deg desde la
-    horizontal (30deg de la vertical) -> imprimible. Base plana la pone finish_body."""
+    """Pillowy; la parte de abajo lleva un chaflan MUY suavizado (se ve redondo,
+    casi como las esquinas de arriba) y una base plana con el borde redondeado.
+    Sigue imprimiendo de pie: voladizo maximo ~47deg. La base plana ya va aqui
+    (poner BASE_CUT=0 en el generador para que finish_body no vuelva a cortar)."""
     body = body_pillowy(X, Y, Z)
-    y_knee = -(H / 2 - R)                 # donde empezaba el redondeo inferior
-    k = 0.577                             # cot(60deg): bisel a 60deg de la horizontal
+    y_knee = -(H / 2 - R) + 2.0           # el chaflan empieza mas abajo -> mas curva
+    k = 0.46                              # bisel mas vertical (mas redondo, imprimible)
     inset = (np.clip(y_knee - Y, 0.0, None) * k).astype(f32)
     cone2d = G.sdf_round_rect_2d(X, Z, W / 2 - R - inset, D / 2 - R - inset, R)
-    return op_smax(body, cone2d, 0.9)     # bisela la base (transicion suave)
+    body = op_smax(body, cone2d, 3.2)     # bisel muy suavizado -> lee como redondo
+    y_base = -H / 2 + 3.0
+    body = op_smax(body, (y_base - Y).astype(f32), 2.0)   # base plana, borde redondeado
+    return body.astype(f32)
 
 
 def shape_cajita(X, Y, Z):

@@ -11,7 +11,7 @@ import generar_formas as F      # trae shape_chaflan / op_smax (mismos parametro
 G.EARS_ON = False
 G.VOXEL = 0.18
 G.BRAND_ON = True               # logo BLOKI grabado en la espalda (abajo)
-G.BASE_CUT = 2.5                # base plana del chaflan
+G.BASE_CUT = 0.0                # la base plana la pone shape_chaflan (borde redondeado)
 G.NFC_CY = -9.0                 # zona ancha, pared sana; lee a ~5 mm de la base
 f32 = np.float32
 W, H, D, R = G.W, G.H, G.D, G.R
