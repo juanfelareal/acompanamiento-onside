@@ -40,6 +40,49 @@ def tex_crochet(X, Y, Z):
     return (-amp * yarn * yfade * T.pole_fade(X, Z)).astype(f32)
 
 
+def build_laminae(X, Y, Z):
+    """Dos LAMINAS completas que se apilan y encajan:
+      - eyes (negra): placa trasera completa + 2 ojos (cilindro+cupula) que suben.
+      - face (crema): placa delantera completa + nariz - 2 huecos por donde ASOMAN
+        los ojos de la lamina trasera.
+    Ambas tienen el mismo contorno (encajan en el rebaje del cuerpo)."""
+    front_z = D / 2.0
+    face_top = front_z - G.FACE_RECESS
+    pocket_floor = face_top - G.PANEL_T
+    PLATE_E = 1.1                         # grosor lamina de ojos (atras)
+    mid_z = pocket_floor + PLATE_E        # interfaz entre laminas
+    PROT = 0.7                            # cuanto asoma el ojo por delante
+    hx = G.FACE_W / 2 - G.FACE_R
+    hy = G.FACE_H / 2 - G.FACE_R
+    rr = G.sdf_round_rect_2d(X, Y - G.FACE_CY, hx, hy, G.FACE_R)     # contorno panel
+    eye_pos = [(-G.EYE_DX, G.FACE_CY + G.EYE_DY), (G.EYE_DX, G.FACE_CY + G.EYE_DY)]
+    ER = G.EYE_R
+    # cupula esferica de altura PROT sobre base de radio ER
+    Rc = (ER ** 2 + PROT ** 2) / (2 * PROT)
+    z0 = face_top + PROT - Rc
+
+    # ---- lamina de OJOS (negra) ----
+    eyes = G.op_intersect(rr, G.z_slab(Z, pocket_floor, mid_z))     # placa trasera
+    holes = None
+    for (ex, ey) in eye_pos:
+        cyl = G.cylinder_field(X, Y, Z, ex, ey, ER, mid_z, face_top)         # pasa el hueco
+        cap = G.op_intersect(G.sphere_field(X, Y, Z, [ex, ey, z0], Rc),
+                             (face_top - Z))                                 # cupula que asoma
+        eyes = G.op_union(eyes, G.op_union(cyl, cap))
+        h = G.cylinder_field(X, Y, Z, ex, ey, ER + G.EYE_CLEAR,
+                             mid_z - 0.6, face_top + PROT + 0.6)
+        holes = h if holes is None else G.op_union(holes, h)
+
+    # ---- lamina de la CARA (crema) ----
+    ny = G.FACE_CY + G.NOSE_DY
+    nose_cz = face_top + G.NOSE_PROTRUDE - G.NOSE_R
+    nose = G.sphere_field(X, Y, Z, [0.0, ny, nose_cz], G.NOSE_R)
+    face = G.op_intersect(rr, G.z_slab(Z, mid_z, face_top))         # placa delantera
+    face = G.op_union(face, nose)
+    face = G.op_subtract(face, holes)                              # huecos de los ojos
+    return face, eyes
+
+
 def main():
     print("Grilla (VOXEL=%.2f)..." % G.VOXEL)
     X, Y, Z, origin, spacing = G.build_grid()
@@ -59,8 +102,10 @@ def main():
     d = m.bounds[1] - m.bounds[0]
     print(f"  dim (mm): {d[0]:.1f} x {d[1]:.1f} x {d[2]:.1f}")
 
-    m_face = G.mesh_from_field(feats["panel"], origin, spacing, "cara")
-    m_black = G.mesh_from_field(feats["black"], origin, spacing, "ojos")
+    face_field, eyes_field = build_laminae(X, Y, Z)
+    m_face = G.mesh_from_field(face_field, origin, spacing, "cara(lamina)")
+    m_black = G.mesh_from_field(eyes_field, origin, spacing, "ojos(lamina)")
+    del face_field, eyes_field
     m_face.export("cara_crema.stl"); m_black.export("ojos_negro.stl")
     G.export_3mf_ams([(m_face, "cara_crema", "FAEBCD")], "cara_crema.3mf")
     G.export_3mf_ams([(m_black, "ojos_negro", "1E1E1E")], "ojos_negro.3mf")
