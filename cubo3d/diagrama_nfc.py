@@ -8,7 +8,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import trimesh
 
-body = trimesh.load("cuerpo_amarillo.stl")
+body = trimesh.load("cuerpo_crochet.stl")
 
 PLATE_Y = float(body.bounds[0][1])        # base (va sobre la cama al imprimir de pie)
 TOP_Y = float(body.bounds[1][1])          # coronilla (ultimo en imprimirse)
@@ -65,7 +65,8 @@ ax.annotate("el cuerpo solido\nde encima sella el tag",
             fontsize=8.5, ha="left", arrowprops=dict(arrowstyle="->", color="#555"))
 
 # lectura por debajo (telefono en la base)
-ax.annotate("se LEE acercando el\ntelefono a la BASE\n(tag a ~2 mm)", xy=((vz0+vz1)/2, PLATE_Y),
+ax.annotate("se LEE acercando el\ntelefono a la BASE\n(tag a ~%.0f mm)" % (vy0 - PLATE_Y),
+            xy=((vz0+vz1)/2, PLATE_Y),
             xytext=((vz0+vz1)/2, PLATE_Y - 3.4), fontsize=9.5, color="#0a7",
             ha="center", va="top", fontweight="bold",
             arrowprops=dict(arrowstyle="-|>", color="#0a7", lw=2))
