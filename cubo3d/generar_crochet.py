@@ -23,18 +23,16 @@ def tex_crochet(X, Y, Z):
     """Punto stockinette: columnas alrededor (theta) x filas (Y), cada celda una
     'V' de hilo redondeado; filas desfasadas medio punto (entrelazado)."""
     theta = np.arctan2(Z, X).astype(f32)
-    Ncols = 44
+    Ncols = 44                                   # puntos alrededor
     col = theta / (2 * np.pi) * Ncols
-    rowH = 2.3
+    rowH = 2.3                                    # alto de fila (mm)
     row = (Y - (-H / 2)) / rowH
-    ri = np.floor(row)
-    col2 = col + 0.5 * ri                       # desfase medio punto (ladrillo)
-    fc = (col2 % 1.0) - 0.5
+    fc = (col % 1.0) - 0.5                        # columnas verticales (sin desfase)
     fr = row % 1.0
-    d = np.minimum(np.abs(fc - 0.5 * fr), np.abs(fc + 0.5 * fr))
-    w = 0.24
+    d = np.minimum(np.abs(fc - 0.5 * fr), np.abs(fc + 0.5 * fr))   # dist a las 2 piernas
+    w = 0.33                                     # hilo GORDO (lana)
     yarn = np.clip(1.0 - (d / w) ** 2, 0.0, 1.0) ** 0.5
-    amp = 0.40                                   # relieve del hilo (mm)
+    amp = 0.42                                   # relieve del hilo (mm)
     yfade = np.clip((H / 2 - Y) / R, 0.0, 1.0).astype(f32)
     return (-amp * yarn * yfade * T.pole_fade(X, Z)).astype(f32)
 
