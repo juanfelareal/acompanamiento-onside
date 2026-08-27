@@ -10,7 +10,7 @@ import generar_formas as F      # trae shape_chaflan / op_smax (mismos parametro
 
 G.EARS_ON = False
 G.VOXEL = 0.18
-G.BRAND_ON = False              # sin logo en esta prueba (para no chocar con el tejido)
+G.BRAND_ON = True               # logo BLOKI grabado en la espalda (abajo)
 G.BASE_CUT = 2.5                # base plana del chaflan
 G.NFC_CY = -9.0                 # zona ancha, pared sana; lee a ~5 mm de la base
 f32 = np.float32
@@ -20,19 +20,22 @@ F.W, F.H, F.D, F.R = W, H, D, R
 
 
 def tex_crochet(X, Y, Z):
-    """Punto stockinette: columnas alrededor (theta) x filas (Y), cada celda una
-    'V' de hilo redondeado; filas desfasadas medio punto (entrelazado)."""
+    """Textura CHEVRON/HERRINGBONE (espiga), como la abeja: bandas de columna con
+    diagonal alterna -> zigzag continuo. Filas alrededor (theta), sube en Y."""
     theta = np.arctan2(Z, X).astype(f32)
-    Ncols = 44                                   # puntos alrededor
+    Ncols = 64                                   # puntos alrededor (~1.9 mm c/u; par)
     col = theta / (2 * np.pi) * Ncols
-    rowH = 2.3                                    # alto de fila (mm)
+    rowH = 1.9                                    # alto de fila (mm)
     row = (Y - (-H / 2)) / rowH
-    fc = (col % 1.0) - 0.5                        # columnas verticales (sin desfase)
-    fr = row % 1.0
-    d = np.minimum(np.abs(fc - 0.5 * fr), np.abs(fc + 0.5 * fr))   # dist a las 2 piernas
-    w = 0.33                                     # hilo GORDO (lana)
+    bw = 1.0                                      # ancho de banda (1 = chevron fino)
+    ci = np.floor(col / bw)
+    s = (1 - 2 * (ci.astype(np.int32) % 2)).astype(f32)   # pendiente alterna +/-1
+    cl = col - ci * bw
+    u = row - s * cl                             # coordenada diagonal
+    d = np.abs((u % 1.0) - 0.5)                   # dist al centro del hilo
+    w = 0.34
     yarn = np.clip(1.0 - (d / w) ** 2, 0.0, 1.0) ** 0.5
-    amp = 0.42                                   # relieve del hilo (mm)
+    amp = 0.38                                    # relieve del hilo (mm)
     yfade = np.clip((H / 2 - Y) / R, 0.0, 1.0).astype(f32)
     return (-amp * yarn * yfade * T.pole_fade(X, Z)).astype(f32)
 

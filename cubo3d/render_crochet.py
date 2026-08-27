@@ -9,7 +9,7 @@ from matplotlib.collections import PolyCollection
 import trimesh
 
 VIEWS = [("Frente 3/4", np.array([0.45, 0.32, 1.0])),
-         ("Lateral / espalda", np.array([1.0, 0.28, -0.35]))]
+         ("Espalda (logo)", np.array([-0.25, 0.12, -1.0]))]
 PARTS = [("cuerpo_crochet.stl", (0.96, 0.82, 0.20)),
          ("cara_crema.stl", (0.98, 0.92, 0.80)),
          ("ojos_negro.stl", (0.11, 0.11, 0.11))]
