@@ -23,9 +23,9 @@ def tex_crochet(X, Y, Z):
     """Textura CHEVRON/HERRINGBONE (espiga), como la abeja: bandas de columna con
     diagonal alterna -> zigzag continuo. Filas alrededor (theta), sube en Y."""
     theta = np.arctan2(Z, X).astype(f32)
-    Ncols = 64                                   # puntos alrededor (~1.9 mm c/u; par)
+    Ncols = 96                                   # puntos alrededor (~1.4 mm c/u, como la abeja)
     col = theta / (2 * np.pi) * Ncols
-    rowH = 1.9                                    # alto de fila (mm)
+    rowH = 1.4                                    # alto de fila (mm)
     row = (Y - (-H / 2)) / rowH
     bw = 1.0                                      # ancho de banda (1 = chevron fino)
     ci = np.floor(col / bw)
@@ -39,20 +39,16 @@ def tex_crochet(X, Y, Z):
     yfade = np.clip((H / 2 - Y) / R, 0.0, 1.0).astype(f32)
     tex = amp * yarn * yfade * T.pole_fade(X, Z)  # magnitud del relieve del tejido
 
-    # --- LOGO BLOKI en la ESPALDA: PLACA lisa recogida + letras hundidas ---
-    # Se quita el tejido en una placa (etiqueta lisa) y las letras se hunden mas
-    # -> se lee nitido. Todo sigue la superficie curva y se limita a la espalda.
+    # --- LOGO BLOKI en la ESPALDA: SOLO las letras grabadas (sin placa) ---
+    # Las letras se hunden y se les quita el tejido adentro; el resto queda tejido.
+    # Sigue la superficie curva. Subido a Y=-3.5 -> cae en la parte PLANA de la
+    # espalda (no en la curva de abajo), para que el grabado salga parejo.
     xs = X[:, 0, 0]; ys = Y[0, :, 0]
-    lcx, lcy = 0.0, -5.9
-    logo2d = G.logo_sdf_2d(xs, ys, "bloki_logo_mask.png", 5.45, lcx, lcy)[:, :, None]
+    logo2d = G.logo_sdf_2d(xs, ys, "bloki_logo_mask.png", 5.45, 0.0, -3.5)[:, :, None]
     gate = np.clip((-6.0 - Z) / 2.0, 0.0, 1.0).astype(f32)      # solo espalda
-    lmask = np.clip(0.5 - logo2d / 0.4, 0.0, 1.0).astype(f32)   # letras
-    plaque2d = G.sdf_round_rect_2d(X, Y - lcy, 6.6, 4.1, 1.6)   # placa (etiqueta)
-    pmask = np.clip(0.5 - plaque2d / 0.6, 0.0, 1.0).astype(f32)
-    pm = pmask * gate
-    lm = lmask * pm
-    PLAQUE_D, LETTER_D = 0.35, 0.55
-    disp = -tex * (1.0 - pm) + PLAQUE_D * pm + LETTER_D * lm
+    lm = np.clip(0.5 - logo2d / 0.35, 0.0, 1.0).astype(f32) * gate
+    DEPTH = 0.8
+    disp = -tex * (1.0 - lm) + DEPTH * lm
     return disp.astype(f32)
 
 
