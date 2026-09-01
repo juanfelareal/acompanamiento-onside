@@ -81,10 +81,12 @@ def build_laminae(X, Y, Z):
     Ambas tienen el mismo contorno (encajan en el rebaje del cuerpo)."""
     front_z = D / 2.0
     face_top = front_z - G.FACE_RECESS
-    pocket_floor = face_top - G.PANEL_T
-    PLATE_E = 1.1                         # grosor lamina de ojos (atras)
-    mid_z = pocket_floor + PLATE_E        # interfaz entre laminas
-    PROT = 0.7                            # cuanto asoma el ojo por delante
+    PLATE_F = 1.0                         # grosor lamina de la CARA (DELGADA, asienta bien)
+    PLATE_E = 1.2                         # grosor lamina de ojos (respaldo atras)
+    mid_z = face_top - PLATE_F            # interfaz entre laminas
+    eyes_back = mid_z - PLATE_E           # cara trasera de la lamina de ojos
+    # sandwich = PLATE_F+PLATE_E = 2.2 mm < rebaje 2.8 -> entra con holgura de fondo
+    PROT = 0.8                            # cuanto asoma el ojo por delante
     hx = G.FACE_W / 2 - G.FACE_R
     hy = G.FACE_H / 2 - G.FACE_R
     rr = G.sdf_round_rect_2d(X, Y - G.FACE_CY, hx, hy, G.FACE_R)     # contorno panel
@@ -95,7 +97,7 @@ def build_laminae(X, Y, Z):
     z0 = face_top + PROT - Rc
 
     # ---- lamina de OJOS (negra) ----
-    eyes = G.op_intersect(rr, G.z_slab(Z, pocket_floor, mid_z))     # placa trasera
+    eyes = G.op_intersect(rr, G.z_slab(Z, eyes_back, mid_z))        # placa trasera
     holes = None
     for (ex, ey) in eye_pos:
         cyl = G.cylinder_field(X, Y, Z, ex, ey, ER, mid_z, face_top)         # pasa el hueco
